@@ -4,7 +4,7 @@ from pytest import raises
 from typefit.fitting import (
     _handle,
     _handle_list,
-    _handle_named_tuple,
+    _handle_mappings,
     _handle_none,
     _handle_type,
     _handle_union,
@@ -99,13 +99,13 @@ def test_named_tuple():
         a: int
         b: Text
 
-    assert _handle_named_tuple(Foo, {"a": 42, "b": "hello"}) == Foo(42, "hello")
+    assert _handle_mappings(Foo, {"a": 42, "b": "hello"}) == Foo(42, "hello")
 
     with raises(ValueError):
-        _handle_named_tuple(None, {})
+        _handle_mappings(None, {})
 
     with raises(ValueError):
-        _handle_named_tuple(Foo, None)
+        _handle_mappings(Foo, None)
 
 
 def test_handle_none():

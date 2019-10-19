@@ -1,3 +1,4 @@
+from dataclasses import is_dataclass
 from inspect import isclass
 from typing import (
     Any,
@@ -94,13 +95,13 @@ def _handle_type(t: Type[T], value: Any) -> T:
     return t(value)
 
 
-def _handle_named_tuple(t: Type[T], value: Any) -> T:
+def _handle_mappings(t: Type[T], value: Any) -> T:
     """
-    This maps a dictionary into a type-annotated named tuple. All field
-    declared in the tuple must be found in the dictionary and extra fields
-    in the dictionary will be ignored.
+    This maps a dictionary into a type-annotated named tuple or dataclass. All
+    fields declared in the tuple/class must be found in the dictionary and
+    extra fields in the dictionary will be ignored.
 
-    So far, default values in the named tuple are not taken in account so
+    So far, default values in the named tuple/class are not taken in account so
     all fields are indeed required to be found in the dictionary (not just the
     ones you want to set).
     """
@@ -108,7 +109,7 @@ def _handle_named_tuple(t: Type[T], value: Any) -> T:
     if not isclass(t):
         raise ValueError
 
-    if not issubclass(t, tuple):
+    if not issubclass(t, tuple) and not is_dataclass(t):
         raise ValueError
 
     info = get_type_hints(t)
