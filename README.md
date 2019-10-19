@@ -67,7 +67,7 @@ from typing import NamedTuple, Text, List
 
 class Message(NamedTuple):
     content: Text
-    date: narrows.DateTimeFit
+    date: narrows.DateTime
 
 data = {
     "content": "Hi!",
@@ -87,9 +87,9 @@ lib, the lib is listed as an extra dependency and won't be installed by default
 so for the feature to work you'll have to install that lib.
 
 - Date/time &mdash; Based on [`pendulum`](https://pendulum.eustace.io/)
-    - `DateTimeFit` &mdash; Parses an ISO date/time
-    - `DateFit` &mdash; Parses an ISO date
-    - `TimeStampFit` &mdash; Parses a Unix timestamp (in seconds)
+    - `DateTime` &mdash; Parses an ISO date/time
+    - `Date` &mdash; Parses an ISO date
+    - `TimeStamp` &mdash; Parses a Unix timestamp (in seconds)
 
 ### Custom
 
@@ -125,7 +125,7 @@ date-related narrows described above. Let's dissect one.
 ```python
 import pendulum
 
-class TimeStampFit(pendulum.DateTime):
+class TimeStamp(pendulum.DateTime):
     def __new__(cls, date: int):
         return pendulum.from_timestamp(date)
 ```
