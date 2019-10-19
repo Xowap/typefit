@@ -6,7 +6,7 @@ except ImportError:
     pass
 else:
     # noinspection PyInitNewSignature
-    class DateTimeFit(pendulum.DateTime):
+    class DateTime(pendulum.DateTime):
         """
         Parses a date/time and returns a standard pendulum DateTime.
         """
@@ -20,7 +20,7 @@ else:
             return self
 
     # noinspection PyInitNewSignature
-    class TimeStampFit(pendulum.DateTime):
+    class TimeStamp(pendulum.DateTime):
         """
         Parses a Unix timestamp and returns a standard pendulum DateTime.
         """
@@ -29,7 +29,7 @@ else:
             return pendulum.from_timestamp(date)
 
     # noinspection PyInitNewSignature
-    class DateFit(pendulum.Date):
+    class Date(pendulum.Date):
         """
         Parses a date and returns a standard pendulum Date.
         """
