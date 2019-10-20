@@ -21,6 +21,11 @@ class HttpCookies(NamedTuple):
     cookies: Dict[Text, Text]
 
 
+class HttpAuth(NamedTuple):
+    authenticated: bool
+    user: Text
+
+
 @fixture(name="bin_url")
 def make_bin_url():
     return "https://httpbin.org/"
@@ -158,3 +163,34 @@ def test_get_cookies_parametric(bin_url):
 
     cookies = Bin().test_cookies("42")
     assert cookies.cookies["answer"] == "42"
+
+
+def test_get_auth_static(bin_url):
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        def auth(self) -> Optional[hm.AuthTypes]:
+            return "foo", "bar"
+
+        @api.get("basic-auth/{user}/{password}")
+        def test_auth(self, user: Text, password: Text) -> HttpAuth:
+            pass
+
+    auth = Bin().test_auth("foo", "bar")
+    assert auth.authenticated
+    assert auth.user == "foo"
+
+
+def test_get_auth_parametric(bin_url):
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        @api.get(
+            "basic-auth/{user}/{password}", auth=lambda user, password: (user, password)
+        )
+        def test_auth(self, user: Text, password: Text) -> HttpAuth:
+            pass
+
+    auth = Bin().test_auth("foo", "bar")
+    assert auth.authenticated
+    assert auth.user == "foo"

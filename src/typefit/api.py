@@ -21,12 +21,16 @@ Params = Union[None, hm.QueryParamTypes, ParamsFactory]
 CookiesFactory = Callable[..., hm.CookieTypes]
 Cookies = Union[None, hm.CookieTypes, CookiesFactory]
 
+AuthFactory = Callable[..., hm.AuthTypes]
+Auth = Union[None, hm.AuthTypes, AuthFactory]
+
 
 def get(
     path: Path,
     params: Params = None,
     headers: Headers = None,
     cookies: Cookies = None,
+    auth: Auth = None,
     hint: Any = None,
 ):
     """
@@ -67,6 +71,7 @@ def get(
                 params=params,
                 headers=headers,
                 cookies=cookies,
+                auth=auth,
                 hint=hint,
                 kwargs=bound.arguments,
                 data_type=sig.return_annotation,
@@ -133,6 +138,20 @@ class _SyncClientHelper:
 
         return out
 
+    def auth(self, override: Auth, kwargs: Dict[Text, Any]) -> Auth:
+        """
+        If there is an override from the decorator then this prevails over the
+        static auth provided by the client class but otherwise it will just use
+        the output of the auth() method in the client.
+        """
+
+        ov = callable_value(override, kwargs)
+
+        if ov:
+            return ov
+
+        return self.client.auth()
+
     def get(
         self,
         kwargs: Dict[Text, Any],
@@ -140,6 +159,7 @@ class _SyncClientHelper:
         path: Text,
         headers: Headers = None,
         cookies: Cookies = None,
+        auth: Auth = None,
         params: Params = None,
         hint: Any = None,
     ) -> T:
@@ -152,6 +172,7 @@ class _SyncClientHelper:
             headers=self.headers(headers, kwargs),
             params=callable_value(params, kwargs),
             cookies=self.cookies(cookies, kwargs),
+            auth=self.auth(auth, kwargs),
         )
         self.client.raise_errors(r, hint)
         data = self.client.decode(r, hint)
@@ -179,6 +200,11 @@ class SyncClient:
     def cookies(self) -> Optional[hm.CookieTypes]:
         """
         Inherit this to generate cookies to be sent at each request
+        """
+
+    def auth(self) -> Optional[hm.AuthTypes]:
+        """
+        Inherit this to generate auth to be sent at each request
         """
 
     def raise_errors(self, resp: httpx.Response, hint: Any) -> None:
