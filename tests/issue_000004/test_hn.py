@@ -1,4 +1,3 @@
-
 from typefit_hn.api import HackerNews
 from typefit_hn.models import Story
 

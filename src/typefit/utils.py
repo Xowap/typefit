@@ -1,6 +1,6 @@
 from inspect import Parameter, signature
-from typing import Any, Callable, Dict, Text
 from string import Formatter
+from typing import Any, Callable, Dict, Text
 from urllib.parse import quote_plus
 
 
@@ -69,6 +69,5 @@ class UrlFormatter(Formatter):
 
     def format_field(self, value, format_spec):
         out = super().format_field(value, format_spec)
-        out = quote_plus(f'{out}')
+        out = quote_plus(f"{out}")
         return out
-

@@ -7,7 +7,7 @@ import httpx
 import httpx.models as hm
 
 from .fitting import T, typefit
-from .utils import callable_value, UrlFormatter
+from .utils import UrlFormatter, callable_value
 
 HeadersFactory = Callable[..., hm.HeaderTypes]
 Headers = Union[None, hm.HeaderTypes, HeadersFactory]
