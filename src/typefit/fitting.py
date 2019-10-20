@@ -131,6 +131,39 @@ def _handle_mappings(t: Type[T], value: Any) -> T:
     return t(**kwargs)
 
 
+def _handle_any(t: Type[T], value: Any) -> T:
+    """
+    If the type is Any then accept everything as-is
+    """
+
+    if t is not Any:
+        raise ValueError
+
+    return value
+
+
+def _handle_dict(t: Type[T], value: Any) -> T:
+    """
+    Handles dictionaries. If the dictionary does not specify any types then
+    nothing is coerced and the dict is returned as-is. However if the dict is
+    defined with types (like Dict[Text, Text] by example) then the types are
+    coerced.
+    """
+
+    if get_origin(t) is not dict:
+        raise ValueError
+
+    if not isinstance(value, dict):
+        raise ValueError
+
+    key_t, value_t = get_args(t)
+
+    if isinstance(key_t, TypeVar) or isinstance(value_t, TypeVar):
+        return value
+    else:
+        return {typefit(key_t, k): typefit(value_t, v) for k, v in value.items()}
+
+
 def _handle_none(t: Type[T], value: Any) -> T:
     """
     If the type specification is either None or NoneType then we allow None

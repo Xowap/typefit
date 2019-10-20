@@ -71,3 +71,4 @@ class UrlFormatter(Formatter):
         out = super().format_field(value, format_spec)
         out = quote_plus(f'{out}')
         return out
+
