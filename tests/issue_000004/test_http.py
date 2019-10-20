@@ -102,3 +102,27 @@ def test_get_hint(bin_url):
 
     Bin().get()
     assert called == {"raise_errors", "decode", "extract"}
+
+
+def test_get_params_static(bin_url):
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        @api.get("get", params={'value': '42'})
+        def get(self) -> HttpGet:
+            pass
+
+    get = Bin().get()
+    assert get.args["value"] == "42"
+
+
+def test_get_params_parametric(bin_url):
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        @api.get("get", params=lambda value: {'value': value})
+        def get(self, value: int) -> HttpGet:
+            pass
+
+    get = Bin().get(42)
+    assert get.args["value"] == "42"

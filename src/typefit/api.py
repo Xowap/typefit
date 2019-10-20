@@ -15,8 +15,10 @@ Headers = Union[None, hm.HeaderTypes, HeadersFactory]
 PathFactory = Callable[..., Text]
 Path = Union[PathFactory, Text]
 
+Params = Optional[hm.QueryParamTypes]
 
-def get(path: Path, headers: Headers = None, hint: Any = None):
+
+def get(path: Path, params: Params = None, headers: Headers = None, hint: Any = None):
     """
     Generates an API method that GET the URL, based on provided parameters and
     method signature. The decorated method's code will never be called, only
@@ -52,6 +54,7 @@ def get(path: Path, headers: Headers = None, hint: Any = None):
 
             return self.helper.get(
                 path=path,
+                params=params,
                 headers=headers,
                 hint=hint,
                 kwargs=bound.arguments,
@@ -108,6 +111,7 @@ class _SyncClientHelper:
         data_type: Type[T],
         path: Text,
         headers: Headers = None,
+        params: Params = None,
         hint: Any = None,
     ) -> T:
         """
@@ -115,7 +119,9 @@ class _SyncClientHelper:
         """
 
         r = self.http.get(
-            url=self.url(path, kwargs), headers=self.headers(headers, kwargs)
+            url=self.url(path, kwargs),
+            headers=self.headers(headers, kwargs),
+            params=callable_value(params, kwargs),
         )
         self.client.raise_errors(r, hint)
         data = self.client.decode(r, hint)
