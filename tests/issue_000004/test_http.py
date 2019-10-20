@@ -17,6 +17,10 @@ class HttpGet(NamedTuple):
     url: Text
 
 
+class HttpCookies(NamedTuple):
+    cookies: Dict[Text, Text]
+
+
 @fixture(name="bin_url")
 def make_bin_url():
     return "https://httpbin.org/"
@@ -108,7 +112,7 @@ def test_get_params_static(bin_url):
     class Bin(api.SyncClient):
         BASE_URL = bin_url
 
-        @api.get("get", params={'value': '42'})
+        @api.get("get", params={"value": "42"})
         def get(self) -> HttpGet:
             pass
 
@@ -120,9 +124,37 @@ def test_get_params_parametric(bin_url):
     class Bin(api.SyncClient):
         BASE_URL = bin_url
 
-        @api.get("get", params=lambda value: {'value': value})
+        @api.get("get", params=lambda value: {"value": value})
         def get(self, value: int) -> HttpGet:
             pass
 
     get = Bin().get(42)
     assert get.args["value"] == "42"
+
+
+def test_get_cookies_static(bin_url):
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        def cookies(self) -> Optional[hm.CookieTypes]:
+            return {"answer": "nope", "foo": "bar"}
+
+        @api.get("cookies", cookies={"answer": "42"})
+        def test_cookies(self) -> HttpCookies:
+            pass
+
+    cookies = Bin().test_cookies()
+    assert cookies.cookies["answer"] == "42"
+    assert cookies.cookies["foo"] == "bar"
+
+
+def test_get_cookies_parametric(bin_url):
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        @api.get("cookies", cookies=lambda answer: {"answer": answer})
+        def test_cookies(self, answer: Text) -> HttpCookies:
+            pass
+
+    cookies = Bin().test_cookies("42")
+    assert cookies.cookies["answer"] == "42"
