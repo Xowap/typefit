@@ -2,5 +2,5 @@ dist: bionic
 language: python
 python:
   - "3.8"
-install: "pip install poetry && poetry install -E dates"
+install: "pip install poetry && poetry install -E dates -E api"
 script: "make test"
