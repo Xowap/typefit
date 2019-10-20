@@ -13,5 +13,7 @@ isort:
 %.txt: %.in
 	'$(PYTHON_BIN)' -m piptools compile --generate-hashes $<
 
+test: export PYTHONPATH=$(realpath example)
+
 test:
 	poetry run pytest tests
