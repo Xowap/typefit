@@ -1,3 +1,6 @@
+import re
+from base64 import b64decode
+from io import BytesIO
 from json import JSONDecodeError
 from typing import Any, Dict, List, NamedTuple, Optional, Text, Union
 
@@ -6,14 +9,44 @@ import httpx.models as hm
 from pytest import fixture, raises
 from typefit import api
 
+
+class DataUrl:
+    """
+    Decodes a Base64 encoded data URL
+    """
+
+    exp = re.compile(r"data:(?P<mime>[^;]+);base64,(?P<content>.*)")
+
+    def __init__(self, url: Text):
+        m = self.exp.match(url)
+
+        if not m:
+            raise ValueError
+
+        self.mime = m.group("mime")
+        self.content = b64decode(m.group("content").encode())
+
+
 HttpArg = Union[Text, List[Text]]
 HttpArgs = Dict[Text, HttpArg]
 HttpHeaders = Dict[Text, Text]
+HttpFiles = Dict[Text, DataUrl]
 
 
 class HttpGet(NamedTuple):
     args: HttpArgs
     headers: HttpHeaders
+    origin: Text
+    url: Text
+
+
+class HttpPost(NamedTuple):
+    args: HttpArgs
+    data: Text
+    files: HttpFiles
+    form: HttpArgs
+    headers: HttpHeaders
+    json: Any
     origin: Text
     url: Text
 
@@ -219,3 +252,76 @@ def test_allow_redirect_parametric(bin_url):
 
     with raises(JSONDecodeError):
         Bin().redirect()
+
+
+def test_post_data_form(bin_url):
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        def data(self):
+            return {"foo": ["1", "2"], "bar": "baz"}
+
+        @api.post("post", data=data)
+        def post(self) -> HttpPost:
+            pass
+
+    post = Bin().post()
+
+    assert post.form["foo"] == ["1", "2"]
+    assert post.form["bar"] == "baz"
+
+
+def test_post_data_raw(bin_url):
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        def data(self):
+            return "abc"
+
+        @api.post("post", data=data)
+        def post(self) -> HttpPost:
+            pass
+
+    post = Bin().post()
+
+    assert post.data == "abc"
+
+
+def test_post_files(bin_url):
+    pixel = (
+        b"GIF89a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00\xff"
+        b"\xff\xff!\xf9\x04\x01\x00\x00\x01\x00,\x00\x00\x00"
+        b"\x00\x01\x00\x01\x00\x00\x02\x02L\x01\x00;"
+    )
+
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        @api.post(
+            "post", files=lambda: {"pixel": ("pixel.gif", BytesIO(pixel), "image/gif")}
+        )
+        def post(self) -> HttpPost:
+            pass
+
+    post = Bin().post()
+
+    assert post.files["pixel"].mime == "image/gif"
+    assert post.files["pixel"].content == pixel
+
+
+def test_post_json(bin_url):
+    data = {"foo": "bar", "yoo": [{"foo": 1}, {"bar": False}]}
+
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        def json(self):
+            return data
+
+        @api.post("post", json=json)
+        def post(self) -> HttpPost:
+            pass
+
+    post = Bin().post()
+
+    assert post.json == data

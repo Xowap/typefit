@@ -1,6 +1,6 @@
 from functools import wraps
 from inspect import signature
-from typing import Any, Callable, Dict, Optional, Text, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Text, Type, Union
 from urllib.parse import urljoin
 
 import httpx
@@ -27,20 +27,34 @@ Auth = Union[None, hm.AuthTypes, AuthFactory]
 AllowRedirectsFactory = Callable[..., bool]
 AllowRedirects = Union[None, bool, AllowRedirectsFactory]
 
+DataFactory = Callable[..., hm.RequestData]
+Data = Union[None, hm.RequestData, DataFactory]
 
-def get(
+FilesFactory = Callable[..., hm.RequestFiles]
+Files = Union[None, hm.RequestFiles, FilesFactory]
+
+JsonType = Union[Dict[Text, "JsonType"], List["JsonType"], int, float, bool, Text, None]
+JsonFactory = Callable[..., hm.RequestFiles]
+Json = Union[None, JsonType, JsonFactory]
+
+
+def _make_decorator(
+    method: Text,
     path: Path,
+    data: Data = None,
+    files: Files = None,
+    json: Json = None,
     params: Params = None,
     headers: Headers = None,
     cookies: Cookies = None,
     auth: Auth = None,
     allow_redirects: AllowRedirects = None,
     hint: Any = None,
-):
+) -> Callable[[Callable], Callable]:
     """
-    Generates an API method that GET the URL, based on provided parameters and
-    method signature. The decorated method's code will never be called, only
-    the generated method will be used.
+    Generates a decorator that can be used for any kind of HTTP request.
+    That's a bit messy but without it the GET/POST/etc decorators would share
+    very duplicated code.
     """
 
     def decorator(func: Callable):
@@ -70,8 +84,12 @@ def get(
             if not isinstance(self, SyncClient):
                 raise TypeError(f"{self!r} is not a SyncClient")
 
-            return self.helper.get(
+            return self.helper.request(
+                method=method,
                 path=path,
+                data=data,
+                files=files,
+                json=json,
                 params=params,
                 headers=headers,
                 cookies=cookies,
@@ -87,6 +105,66 @@ def get(
     return decorator
 
 
+def get(
+    path: Path,
+    params: Params = None,
+    headers: Headers = None,
+    cookies: Cookies = None,
+    auth: Auth = None,
+    allow_redirects: AllowRedirects = None,
+    hint: Any = None,
+):
+    """
+    Generates an API method that GET the URL, based on provided parameters and
+    method signature. The decorated method's code will never be called, only
+    the generated method will be used.
+    """
+
+    return _make_decorator(
+        "get",
+        path=path,
+        params=params,
+        headers=headers,
+        cookies=cookies,
+        auth=auth,
+        allow_redirects=allow_redirects,
+        hint=hint,
+    )
+
+
+def post(
+    path: Path,
+    data: Data = None,
+    files: Files = None,
+    json: Json = None,
+    params: Params = None,
+    headers: Headers = None,
+    cookies: Cookies = None,
+    auth: Auth = None,
+    allow_redirects: AllowRedirects = None,
+    hint: Any = None,
+):
+    """
+    Generates an API method that POST the URL, based on provided parameters and
+    method signature. The decorated method's code will never be called, only
+    the generated method will be used.
+    """
+
+    return _make_decorator(
+        "post",
+        path=path,
+        data=data,
+        files=files,
+        json=json,
+        params=params,
+        headers=headers,
+        cookies=cookies,
+        auth=auth,
+        allow_redirects=allow_redirects,
+        hint=hint,
+    )
+
+
 class _SyncClientHelper:
     """
     Effector for all requests and parameters generation. It's separated from
@@ -97,6 +175,13 @@ class _SyncClientHelper:
     def __init__(self, client: "SyncClient"):
         self.client = client
         self.http = httpx.Client()
+
+    def close(self):
+        """
+        Closes the underlying HTTP connection pool
+        """
+
+        self.http.close()
 
     def url(self, path: Path, kwargs: Dict[Text, Any]):
         """
@@ -172,11 +257,15 @@ class _SyncClientHelper:
 
         return self.client.allow_redirects()
 
-    def get(
+    def request(
         self,
+        method: Text,
         kwargs: Dict[Text, Any],
         data_type: Type[T],
         path: Text,
+        data: Data = None,
+        files: Files = None,
+        json: Json = None,
         headers: Headers = None,
         cookies: Cookies = None,
         auth: Auth = None,
@@ -185,10 +274,13 @@ class _SyncClientHelper:
         hint: Any = None,
     ) -> T:
         """
-        This will do the GET query and fit it into the data.
+        This will generate a call to HTTPX depending on the provided overrides
+        (in the arguments) and available default values as declared by the
+        client. Arguments will be selected automatically depending on the
+        method.
         """
 
-        r = self.http.get(
+        request_args = dict(
             url=self.url(path, kwargs),
             headers=self.headers(headers, kwargs),
             params=callable_value(params, kwargs),
@@ -196,6 +288,15 @@ class _SyncClientHelper:
             auth=self.auth(auth, kwargs),
             allow_redirects=self.allow_redirects(allow_redirects, kwargs),
         )
+
+        if method == "post":
+            request_args.update(
+                data=callable_value(data, kwargs),
+                files=callable_value(files, kwargs),
+                json=callable_value(json, kwargs),
+            )
+
+        r = getattr(self.http, method)(**request_args)
         self.client.raise_errors(r, hint)
         data = self.client.decode(r, hint)
         data = self.client.extract(data, hint)
@@ -213,6 +314,13 @@ class SyncClient:
 
     def __init__(self):
         self.helper = _SyncClientHelper(self)
+
+    def close(self):
+        """
+        Closes the underlying HTTP connection
+        """
+
+        self.helper.close()
 
     def headers(self) -> Optional[hm.HeaderTypes]:
         """
