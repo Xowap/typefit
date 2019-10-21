@@ -24,6 +24,9 @@ Cookies = Union[None, hm.CookieTypes, CookiesFactory]
 AuthFactory = Callable[..., hm.AuthTypes]
 Auth = Union[None, hm.AuthTypes, AuthFactory]
 
+AllowRedirectsFactory = Callable[..., bool]
+AllowRedirects = Union[None, bool, AllowRedirectsFactory]
+
 
 def get(
     path: Path,
@@ -31,6 +34,7 @@ def get(
     headers: Headers = None,
     cookies: Cookies = None,
     auth: Auth = None,
+    allow_redirects: AllowRedirects = None,
     hint: Any = None,
 ):
     """
@@ -72,6 +76,7 @@ def get(
                 headers=headers,
                 cookies=cookies,
                 auth=auth,
+                allow_redirects=allow_redirects,
                 hint=hint,
                 kwargs=bound.arguments,
                 data_type=sig.return_annotation,
@@ -152,6 +157,21 @@ class _SyncClientHelper:
 
         return self.client.auth()
 
+    def allow_redirects(
+        self, override: AllowRedirects, kwargs: Dict[Text, Any]
+    ) -> bool:
+        """
+        Checks if the decorator attempts an override (by returning a non-None
+        value), otherwise stick to the client's value.
+        """
+
+        ov = callable_value(override, kwargs)
+
+        if ov is not None:
+            return ov
+
+        return self.client.allow_redirects()
+
     def get(
         self,
         kwargs: Dict[Text, Any],
@@ -160,6 +180,7 @@ class _SyncClientHelper:
         headers: Headers = None,
         cookies: Cookies = None,
         auth: Auth = None,
+        allow_redirects: AllowRedirects = None,
         params: Params = None,
         hint: Any = None,
     ) -> T:
@@ -173,6 +194,7 @@ class _SyncClientHelper:
             params=callable_value(params, kwargs),
             cookies=self.cookies(cookies, kwargs),
             auth=self.auth(auth, kwargs),
+            allow_redirects=self.allow_redirects(allow_redirects, kwargs),
         )
         self.client.raise_errors(r, hint)
         data = self.client.decode(r, hint)
@@ -206,6 +228,14 @@ class SyncClient:
         """
         Inherit this to generate auth to be sent at each request
         """
+
+    def allow_redirects(self) -> bool:
+        """
+        Return False to disable redirects. Also, if a value is specified in the
+        decorator then this value will be overridden.
+        """
+
+        return True
 
     def raise_errors(self, resp: httpx.Response, hint: Any) -> None:
         """

@@ -1,8 +1,9 @@
+from json import JSONDecodeError
 from typing import Any, Dict, List, NamedTuple, Optional, Text, Union
 
 import httpx
 import httpx.models as hm
-from pytest import fixture
+from pytest import fixture, raises
 from typefit import api
 
 HttpArg = Union[Text, List[Text]]
@@ -194,3 +195,27 @@ def test_get_auth_parametric(bin_url):
     auth = Bin().test_auth("foo", "bar")
     assert auth.authenticated
     assert auth.user == "foo"
+
+
+def test_allow_redirect_static(bin_url):
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        @api.get("redirect/1")
+        def redirect(self) -> HttpGet:
+            pass
+
+    redirect = Bin().redirect()
+    assert redirect.url.endswith("/get")
+
+
+def test_allow_redirect_parametric(bin_url):
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        @api.get("redirect/1", allow_redirects=lambda: False)
+        def redirect(self) -> HttpGet:
+            pass
+
+    with raises(JSONDecodeError):
+        Bin().redirect()
