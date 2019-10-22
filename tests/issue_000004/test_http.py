@@ -325,3 +325,39 @@ def test_post_json(bin_url):
     post = Bin().post()
 
     assert post.json == data
+
+
+def test_put_json(bin_url):
+    data = {"put": True}
+
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        def json(self):
+            return data
+
+        @api.put("put", json=json)
+        def put(self) -> HttpPost:
+            pass
+
+    put = Bin().put()
+
+    assert put.json == data
+
+
+def test_patch_json(bin_url):
+    data = {"patch": True}
+
+    class Bin(api.SyncClient):
+        BASE_URL = bin_url
+
+        def json(self):
+            return data
+
+        @api.patch("patch", json=json)
+        def patch(self) -> HttpPost:
+            pass
+
+    patch = Bin().patch()
+
+    assert patch.json == data

@@ -165,6 +165,72 @@ def post(
     )
 
 
+def put(
+    path: Path,
+    data: Data = None,
+    files: Files = None,
+    json: Json = None,
+    params: Params = None,
+    headers: Headers = None,
+    cookies: Cookies = None,
+    auth: Auth = None,
+    allow_redirects: AllowRedirects = None,
+    hint: Any = None,
+):
+    """
+    Generates an API method that PUT the URL, based on provided parameters and
+    method signature. The decorated method's code will never be called, only
+    the generated method will be used.
+    """
+
+    return _make_decorator(
+        "put",
+        path=path,
+        data=data,
+        files=files,
+        json=json,
+        params=params,
+        headers=headers,
+        cookies=cookies,
+        auth=auth,
+        allow_redirects=allow_redirects,
+        hint=hint,
+    )
+
+
+def patch(
+    path: Path,
+    data: Data = None,
+    files: Files = None,
+    json: Json = None,
+    params: Params = None,
+    headers: Headers = None,
+    cookies: Cookies = None,
+    auth: Auth = None,
+    allow_redirects: AllowRedirects = None,
+    hint: Any = None,
+):
+    """
+    Generates an API method that PATCH the URL, based on provided parameters
+    and method signature. The decorated method's code will never be called,
+    only the generated method will be used.
+    """
+
+    return _make_decorator(
+        "patch",
+        path=path,
+        data=data,
+        files=files,
+        json=json,
+        params=params,
+        headers=headers,
+        cookies=cookies,
+        auth=auth,
+        allow_redirects=allow_redirects,
+        hint=hint,
+    )
+
+
 class _SyncClientHelper:
     """
     Effector for all requests and parameters generation. It's separated from
@@ -289,7 +355,7 @@ class _SyncClientHelper:
             allow_redirects=self.allow_redirects(allow_redirects, kwargs),
         )
 
-        if method == "post":
+        if method in {"post", "put", "patch"}:
             request_args.update(
                 data=callable_value(data, kwargs),
                 files=callable_value(files, kwargs),
