@@ -1,17 +1,8 @@
 from dataclasses import is_dataclass
 from inspect import isclass
-from typing import (
-    Any,
-    Callable,
-    List,
-    Type,
-    TypeVar,
-    Union,
-    get_args,
-    get_origin,
-    get_type_hints,
-)
+from typing import Any, Callable, List, Type, TypeVar, Union, get_type_hints
 
+from .compat import get_args, get_origin
 from .utils import get_single_param
 
 T = TypeVar("T")
