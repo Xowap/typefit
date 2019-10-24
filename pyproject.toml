@@ -28,6 +28,7 @@ httpx = { version = "^0.7", optional = true }
 
 pytest = "*"
 ipython = "*"
+sphinx = "^2.2"
 
 
 [tool.poetry.extras]

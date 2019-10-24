@@ -11,7 +11,7 @@ else:
         Parses a date/time and returns a standard pendulum DateTime.
         """
 
-        def __new__(cls, date: Text):
+        def __new__(cls, date: Text) -> pendulum.DateTime:
             self = pendulum.parse(date)
 
             if not isinstance(self, pendulum.DateTime):
@@ -25,7 +25,7 @@ else:
         Parses a Unix timestamp and returns a standard pendulum DateTime.
         """
 
-        def __new__(cls, date: int):
+        def __new__(cls, date: int) -> pendulum.DateTime:
             return pendulum.from_timestamp(date)
 
     # noinspection PyInitNewSignature
@@ -34,7 +34,7 @@ else:
         Parses a date and returns a standard pendulum Date.
         """
 
-        def __new__(cls, date: Text):
+        def __new__(cls, date: Text) -> pendulum.Date:
             self = pendulum.parse(date)
 
             if isinstance(self, pendulum.DateTime):

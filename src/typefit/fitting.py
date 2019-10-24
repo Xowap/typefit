@@ -113,13 +113,16 @@ def _handle_mappings(t: Type[T], value: Any) -> T:
 
     kwargs = {}
 
-    try:
-        for key, sub_t in info.items():
+    for key, sub_t in info.items():
+        try:
             kwargs[key] = typefit(sub_t, value[key])
-    except KeyError:
-        raise ValueError
+        except KeyError:
+            pass
 
-    return t(**kwargs)
+    try:
+        return t(**kwargs)
+    except TypeError:
+        raise ValueError
 
 
 def _handle_any(t: Type[T], value: Any) -> T:
@@ -192,12 +195,30 @@ _handlers = [func for name, func in locals().items() if name.startswith("_handle
 def typefit(t: Type[T], value: Any) -> T:
     """
     Fits a JSON-decoded value into native Python type-annotated objects.
-    Recognized types are:
 
-    - Simple builtins (`int`, `float`, `bool`, `str`, `None`)
-    - Lists
-    - Mapping a dictionary into a `NamedTuple`
-    - Custom types (eg dates, see the `typefit.narrows` module)
+    Parameters
+    ----------
+    t
+        Type to fit the value into. Currently supported types are:
+
+          - Simple builtins like :class:`int`, :class:`float`,
+            :class:`typing.Text`, :class:`typing.bool`
+          - Custom types. The constructor needs to accept exactly one parameter
+            and that parameter should have a typing annotation.
+          - :class:`typing.Union` to define several possible types
+          - :class:`typing.List` to declare a list and the type of list values
+    value
+        Value to be fit into the type
+
+    Returns
+    -------
+    T
+        If the value fits, a value of the right type is returned.
+
+    Raises
+    ------
+    ValueError
+        When the fitting cannot be done, a :class:`ValueError` is raised.
     """
 
     return _handle(_handlers, t, value)

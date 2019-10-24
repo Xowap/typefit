@@ -7,6 +7,7 @@ from typing import Any, Dict, List, NamedTuple, Optional, Text, Union
 import httpx
 import httpx.models as hm
 from pytest import fixture, raises
+
 from typefit import api
 
 

@@ -2,6 +2,7 @@ from typing import NamedTuple
 
 import pendulum
 from pytest import raises
+
 from typefit import narrows, typefit
 
 

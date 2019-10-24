@@ -17,3 +17,8 @@ test: export PYTHONPATH=$(realpath example)
 
 test:
 	poetry run pytest tests
+
+build:
+	poetry install -E api -E dates
+	cd docs && poetry run make html
+	pip freeze | grep -v egg=typefit > requirements.txt
