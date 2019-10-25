@@ -565,7 +565,7 @@ api = ["httpx"]
 dates = ["pendulum"]
 
 [metadata]
-content-hash = "283a70fc3f889c6102a960e97e2b1dcfa3cf72dd3bee64fbf12abaa39c7a5244"
+content-hash = "49e9754a867b9fa5f8ae1e7738106f4ff21c1c3e01dc844071962e482a5d1192"
 python-versions = "^3.7"
 
 [metadata.hashes]

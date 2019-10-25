@@ -26,7 +26,7 @@ httpx = { version = "^0.7", optional = true }
 
 [tool.poetry.dev-dependencies]
 
-pytest = "*"
+pytest = "5.2.1"
 ipython = "*"
 sphinx = "^2.2"
 
