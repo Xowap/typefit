@@ -171,7 +171,6 @@ version = "1.1.0"
 [[package]]
 category = "dev"
 description = "Read metadata from Python packages"
-marker = "python_version < \"3.8\""
 name = "importlib-metadata"
 optional = false
 python-versions = ">=2.7,!=3.0,!=3.1,!=3.2,!=3.3"
@@ -551,7 +550,6 @@ version = "0.1.7"
 [[package]]
 category = "dev"
 description = "Backport of pathlib-compatible object wrapper for zip files"
-marker = "python_version < \"3.8\""
 name = "zipp"
 optional = false
 python-versions = ">=2.7"
@@ -565,7 +563,7 @@ api = ["httpx"]
 dates = ["pendulum"]
 
 [metadata]
-content-hash = "49e9754a867b9fa5f8ae1e7738106f4ff21c1c3e01dc844071962e482a5d1192"
+content-hash = "7c9eef38e5d23ad174cefcb2c498e671c83ec3507b1aa9cbfe73f3ef7fc20487"
 python-versions = "^3.7"
 
 [metadata.hashes]
