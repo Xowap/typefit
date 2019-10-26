@@ -83,7 +83,62 @@ object.
 
     assert date.month == 1
 
-Narrows are types that will help narrow-down
+.. note::
+
+    Date narrow types depend on the ``pendulum`` package, however Typefit
+    doesn't list it as a dependency. If you want to be able to use those, you
+    need to install ``pendulum`` for your project.
+
+Narrows are types that will help narrow-down the data you are parsing to a
+Python function. Of course, you might not want to limit yourself to builtin
+narrow types.
+
+Custom type
++++++++++++
+
+You can provide a custom narrow type simply by creating a type whose
+constructor will have exactly a single argument which is properly annotated
+(with a simple type like ``int`` or ``Text`` but not a generic like ``Union``
+or ``List``).
+
+.. code-block:: python
+
+    from typing import Text
+    from typefit import typefit
+
+    class Name:
+        def __init__(self, full_name: Text):
+            split = full_name.split(' ')
+
+            if len(split) != 2:
+                raise ValueError('Too many names')
+
+            self.first_name, self.last_name = split
+
+    name = typefit(Name, "Rémy Sanchez")
+    print(name.first_name)
+    print(name.last_name)
+
+Wrapper type
+++++++++++++
+
+However sometimes you just want to wrap a type that already exists but doesn't
+have the right arguments in its constructor. That's the case of the
+date-related narrows described above. Let's dissect one.
+
+.. code-block:: python
+
+    import pendulum
+
+    class TimeStamp(pendulum.DateTime):
+        def __new__(cls, date: int):
+            return pendulum.from_timestamp(date)
+
+You'll probably ask why is there some funny business with ``__new__`` instead
+of just created a function that will parse and return the desired value. The
+answer is that you're doing type annotations so you must provide valid types
+otherwise you'll confuse your static type checker, which loses the interest of
+annotating types in a first place.
 
 Reference
 ---------

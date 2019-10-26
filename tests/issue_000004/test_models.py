@@ -1,7 +1,7 @@
 from json import loads
 
 from typefit import typefit
-from typefit_hn import Ask, Comment, Item, Job, Poll, PollOption, Story
+from typefit_hn.models import Ask, Comment, Item, Job, Poll, PollOption, Story
 
 
 def test_story():

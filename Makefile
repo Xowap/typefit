@@ -21,4 +21,4 @@ test:
 build:
 	poetry install -E api -E dates
 	cd docs && poetry run make html
-	pip freeze | grep -v egg=typefit > requirements.txt
+	poetry run pip freeze | grep -v typefit > requirements.txt

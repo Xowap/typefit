@@ -39,7 +39,7 @@ class Story(BaseStory):
 
 
 @dataclass(frozen=True)
-class Ask(Story):
+class Ask(BaseStory):
     text: Text
 
 

@@ -44,7 +44,7 @@ templates_path = ["_templates"]
 exclude_patterns = []
 
 # Apparently RTD needs this?
-master_doc = 'index'
+master_doc = "index"
 
 
 # -- Options for HTML output -------------------------------------------------

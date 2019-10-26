@@ -22,7 +22,7 @@ decoded JSON data into Python type-annotated structures.
         def get_item(self, item_id: int) -> Item:
             pass
 
-    story = HackerNews().get(42)
+    story = HackerNews().get_item(42)
     print(story.title)
     # An alternative to VC: &#34;Selling In&#34;
 
