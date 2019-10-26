@@ -10,6 +10,8 @@ from pytest import fixture, raises
 
 from typefit import api
 
+from .httpbin_utils import HttpBin, find_free_port, wait_for_port
+
 
 class DataUrl:
     """
@@ -61,9 +63,17 @@ class HttpAuth(NamedTuple):
     user: Text
 
 
-@fixture(name="bin_url")
+@fixture(name="bin_url", scope="module")
 def make_bin_url():
-    return "https://httpbin.org/"
+    port = find_free_port()
+    hb = HttpBin(port)
+    hb.run()
+
+    try:
+        wait_for_port(port, "127.0.0.1")
+        yield f"http://127.0.0.1:{port}/"
+    finally:
+        hb.stop()
 
 
 def test_get_simple(bin_url):
