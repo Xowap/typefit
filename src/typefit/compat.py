@@ -36,7 +36,7 @@ except ImportError:
 
 
 try:
-    from typing import get_args
+    from typing import get_args  # lgtm[py/unused-import]
 except ImportError:
 
     def get_args(tp):

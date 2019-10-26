@@ -113,7 +113,7 @@ def get(
     auth: Auth = None,
     allow_redirects: AllowRedirects = None,
     hint: Any = None,
-):
+):  # lgtm[py/similar-function]
     """
     Generates an API method that GET the URL, based on provided parameters and
     method signature. The decorated method's code will never be called, only
@@ -143,7 +143,7 @@ def post(
     auth: Auth = None,
     allow_redirects: AllowRedirects = None,
     hint: Any = None,
-):
+):  # lgtm[py/similar-function]
     """
     Generates an API method that POST the URL, based on provided parameters and
     method signature. The decorated method's code will never be called, only
@@ -176,7 +176,7 @@ def put(
     auth: Auth = None,
     allow_redirects: AllowRedirects = None,
     hint: Any = None,
-):
+):  # lgtm[py/similar-function]
     """
     Generates an API method that PUT the URL, based on provided parameters and
     method signature. The decorated method's code will never be called, only
@@ -209,7 +209,7 @@ def patch(
     auth: Auth = None,
     allow_redirects: AllowRedirects = None,
     hint: Any = None,
-):
+):  # lgtm[py/similar-function]
     """
     Generates an API method that PATCH the URL, based on provided parameters
     and method signature. The decorated method's code will never be called,
