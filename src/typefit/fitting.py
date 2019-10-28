@@ -1,4 +1,5 @@
 from dataclasses import is_dataclass
+from enum import Enum
 from inspect import isclass
 from typing import Any, Callable, List, Type, TypeVar, Union, get_type_hints
 
@@ -172,6 +173,19 @@ def _handle_none(t: Type[T], value: Any) -> T:
 
     return None
 
+def _handle_enum(t: Type[T], value: Any) -> T:
+    """
+    Accept if the type is enum and return attribute of enum.
+    """
+
+    if not isclass(t):
+        raise ValueError
+
+    if not issubclass(t, Enum):
+        raise ValueError
+
+    return t(value)
+
 
 def _handle(handlers: List[Callable[[Type[T], Any], T]], t: Type[T], value: Any):
     """
@@ -203,6 +217,7 @@ def typefit(t: Type[T], value: Any) -> T:
 
           - Simple builtins like :class:`int`, :class:`float`,
             :class:`typing.Text`, :class:`typing.bool`
+          - Enumerations which are subclass of :class:`enum.Enum`.
           - Custom types. The constructor needs to accept exactly one parameter
             and that parameter should have a typing annotation.
           - :class:`typing.Union` to define several possible types
