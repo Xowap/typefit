@@ -22,6 +22,26 @@ It will use typing annotations in order to understand what kind of data
 structure you expect and then it will create an instance of the specified type
 based on the provided data.
 
+Fitting Enum
+----------------
+
+Typefit can also be used to fit data to an `Enum`.
+
+.. code-block:: python
+
+    from typefit import typefit
+
+    class Color(Enum):
+        RED = 1
+        GREEN = 2
+        BLUE = 3
+
+    item = typefit(Color, 2)
+    assert item == Color.GREEN
+
+typefit will return the attribute of the enum class if the value is valid or else
+it will raise a `ValueError` exception.
+
 Fitting mappings
 ----------------
 
