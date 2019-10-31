@@ -1,13 +1,30 @@
 from dataclasses import is_dataclass
+from dataclasses import asdict as dataclass_as_dict
 from enum import Enum
 from inspect import isclass
 from typing import Any, Callable, List, Type, TypeVar, Union, get_type_hints
 
 from .compat import get_args, get_origin
 from .utils import get_single_param
+from .config import Config
 
 T = TypeVar("T")
 
+
+def _is_mapping_type(t: Type[T]) -> bool:
+    """
+    Return true if type is either a NamedType or dataclass
+    """
+    if not isclass(t):
+        return False
+
+    if not issubclass(t, tuple) and not is_dataclass(t):
+        return False
+
+    if not get_type_hints(t):
+        return False
+
+    return True
 
 def _handle_union(t: Type[T], value: Any) -> T:
     """
@@ -98,21 +115,15 @@ def _handle_mappings(t: Type[T], value: Any) -> T:
     ones you want to set).
     """
 
-    if not isclass(t):
-        raise ValueError
-
-    if not issubclass(t, tuple) and not is_dataclass(t):
-        raise ValueError
-
-    info = get_type_hints(t)
-
-    if not info:
+    if not _is_mapping_type(t):
         raise ValueError
 
     if not isinstance(value, dict):
         raise ValueError
 
     kwargs = {}
+
+    info = get_type_hints(t)
 
     for key, sub_t in info.items():
         try:
@@ -206,7 +217,7 @@ def _handle(handlers: List[Callable[[Type[T], Any], T]], t: Type[T], value: Any)
 _handlers = [func for name, func in locals().items() if name.startswith("_handle_")]
 
 
-def typefit(t: Type[T], value: Any) -> T:
+def typefit(t: Type[T], value: Any, config: Config = Config() ) -> T:
     """
     Fits a JSON-decoded value into native Python type-annotated objects.
 
@@ -225,6 +236,10 @@ def typefit(t: Type[T], value: Any) -> T:
     value
         Value to be fit into the type
 
+    config (optional)
+        Object of :class:typefit.Config provided options to control the behavior
+        of `typefit` function.
+
     Returns
     -------
     T
@@ -236,4 +251,15 @@ def typefit(t: Type[T], value: Any) -> T:
         When the fitting cannot be done, a :class:`ValueError` is raised.
     """
 
-    return _handle(_handlers, t, value)
+    fitted_value = _handle(_handlers, t, value)
+
+    # If strict check and type is a mapping
+    if config.strict_mapping and _is_mapping_type(t):
+        # Check for dataclass
+        if is_dataclass(t) and not dataclass_as_dict(fitted_value) == value:
+            raise ValueError
+        # Check for NamedTuple
+        elif not dict(fitted_value._asdict()) == value:
+            raise ValueError
+
+    return fitted_value

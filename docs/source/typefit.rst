@@ -160,6 +160,48 @@ answer is that you're doing type annotations so you must provide valid types
 otherwise you'll confuse your static type checker, which loses the interest of
 annotating types in a first place.
 
+Config
+------
+
+`typefit` function takes an optional third argument of type `typefit.Config`.
+Config class provides attributes to control the behavior of `typefit` function.
+
+Strict Mode
++++++++++++
+
+When fitting the data to `NamedTuple` for `dataclass` the default behavior is to
+ignore any extra key in the data which is not part of type class. We can control
+this behavior using the `strict_mapping` attribute of `Config` class.
+
+.. code-block:: python
+
+    from pytest import raises
+
+    from typefit import typefit, Config
+
+    class Item(NamedTuple):
+        id: int
+        title: str
+        versions: List[int]
+
+    data = {
+        'id': 1,
+        'title': 'Data 1',
+        'versions': [1, 2, 3]
+    }
+
+    config = Config(strict_mapping=True)
+
+    assert typefit(Item, data, config=config) == Item(data1)
+
+    # Adding an key not in Item class
+    data['newkey'] = 'newValue'
+
+    # Will raise an ValueError
+    with raises(ValueError):
+        assert typefit(Item, data, config=config)
+
+
 Reference
 ---------
 
