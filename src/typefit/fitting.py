@@ -236,6 +236,10 @@ def typefit(t: Type[T], value: Any, config: Config = Config() ) -> T:
     value
         Value to be fit into the type
 
+    config (optional)
+        Object of :class:typefit.Config provided options to control the behavior
+        of `typefit` function.
+
     Returns
     -------
     T
