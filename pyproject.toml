@@ -1,7 +1,7 @@
 [tool.poetry]
 
 name = "typefit"
-version = "0.1.1"
+version = "0.2.0"
 
 description = "Fits JSON values into Python type-anotated objects"
 license = "WTFPL"
