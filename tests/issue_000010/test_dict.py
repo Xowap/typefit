@@ -1,7 +1,6 @@
 from typing import Any, Dict, Text
 
 from pytest import raises
-
 from typefit import typefit
 
 

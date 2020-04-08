@@ -86,6 +86,27 @@ needs most.
    be able to resolve this reference later, meaning that this class has to be
    importable. If hidden inside a 2-nd order function it won't work.
 
+Custom field names
+++++++++++++++++++
+
+If you don't want your fields to bear the exact name as they have in the JSON
+that you are deserializing, you can specify customized names:
+
+.. code-block:: python
+
+    from dataclasses import dataclass, field
+    from typing import Text
+    from typefit import typefit, meta, other_field
+
+
+    @dataclass
+    class Info:
+        some_thing: Text = field(metadata=meta(source=other_field('someThing')))
+
+
+    x: Info = typefit(Info, {"someThing": "foo"})
+    assert x.some_thing == "foo"
+
 Parsing narrow types
 --------------------
 

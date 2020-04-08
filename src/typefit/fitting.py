@@ -1,4 +1,4 @@
-from dataclasses import is_dataclass
+from dataclasses import fields, is_dataclass
 from enum import Enum
 from inspect import isclass
 from typing import Any, Callable, List, Type, TypeVar, Union, get_type_hints
@@ -113,10 +113,20 @@ def _handle_mappings(t: Type[T], value: Any) -> T:
         raise ValueError
 
     kwargs = {}
+    fields_sources = {}
+
+    if is_dataclass(t):
+        # noinspection PyDataclass
+        for field in fields(t):
+            if field.metadata and "typefit_source" in field.metadata:
+                fields_sources[field.name] = field.metadata["typefit_source"]
 
     for key, sub_t in info.items():
         try:
-            kwargs[key] = typefit(sub_t, value[key])
+            if key in fields_sources:
+                kwargs[key] = fields_sources[key](value)
+            else:
+                kwargs[key] = typefit(sub_t, value[key])
         except KeyError:
             pass
 
@@ -172,6 +182,7 @@ def _handle_none(t: Type[T], value: Any) -> T:
         raise ValueError
 
     return None
+
 
 def _handle_enum(t: Type[T], value: Any) -> T:
     """
