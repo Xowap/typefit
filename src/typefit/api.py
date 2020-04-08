@@ -7,6 +7,7 @@ import httpx
 import httpx.models as hm
 
 from .fitting import T, typefit
+from .serialize import SaneSerializer
 from .utils import UrlFormatter, callable_value
 
 HeadersFactory = Callable[..., hm.HeaderTypes]
@@ -359,7 +360,7 @@ class _SyncClientHelper:
             request_args.update(
                 data=callable_value(data, kwargs),
                 files=callable_value(files, kwargs),
-                json=callable_value(json, kwargs),
+                json=self.client.serialize(callable_value(json, kwargs)),
             )
 
         r = getattr(self.http, method)(**request_args)
@@ -380,6 +381,24 @@ class SyncClient:
 
     def __init__(self):
         self.helper = _SyncClientHelper(self)
+        self.serialize = self.init_serialize()
+
+    def init_serialize(self) -> Callable[[Any], Any]:
+        """
+        Everything going through the `json` parameter will be serialized using
+        the serializer function returned by this method. By default this
+        uses the :py:class:`~.typefit.serialize.SaneSerializer` class which
+        is helpful in the general case. If you want something more specific,
+        feel free to override this method.
+
+        If you don't want your data to be tampered with at all, you can do
+        something like
+
+        >>> def init_serialize(self):
+        >>>     return lambda x: x
+        """
+
+        return SaneSerializer().serialize
 
     def close(self):
         """

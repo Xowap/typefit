@@ -43,6 +43,7 @@ Typefit provides several modules to help you.
 
    typefit
    Building API clients <api>
+   serialize
 
 
 Indices and tables

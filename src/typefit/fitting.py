@@ -4,6 +4,7 @@ from inspect import isclass
 from typing import Any, Callable, List, Type, TypeVar, Union, get_type_hints
 
 from .compat import get_args, get_origin
+from .meta import Source
 from .utils import get_single_param
 
 T = TypeVar("T")
@@ -119,14 +120,17 @@ def _handle_mappings(t: Type[T], value: Any) -> T:
         # noinspection PyDataclass
         for field in fields(t):
             if field.metadata and "typefit_source" in field.metadata:
-                fields_sources[field.name] = field.metadata["typefit_source"]
+                source: Source = field.metadata["typefit_source"]
+                fields_sources[field.name] = source.value_from_json
 
     for key, sub_t in info.items():
         try:
             if key in fields_sources:
-                kwargs[key] = fields_sources[key](value)
+                sub_v = fields_sources[key](value)
             else:
-                kwargs[key] = typefit(sub_t, value[key])
+                sub_v = value[key]
+
+            kwargs[key] = typefit(sub_t, sub_v)
         except KeyError:
             pass
 
