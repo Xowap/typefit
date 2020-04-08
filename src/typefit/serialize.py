@@ -1,5 +1,4 @@
-import collections
-from collections import ChainMap
+from collections import ChainMap, abc
 from dataclasses import fields, is_dataclass
 from datetime import date, datetime
 from enum import Enum
@@ -66,9 +65,9 @@ class Serializer:
             return self.serialize_tuple
         elif is_dataclass(obj):
             return self.serialize_dataclass
-        elif isinstance(obj, collections.Sequence):
+        elif isinstance(obj, abc.Sequence):
             return self.serialize_sequence
-        elif isinstance(obj, collections.Mapping):
+        elif isinstance(obj, abc.Mapping):
             return self.serialize_mapping
         elif isinstance(obj, Enum):
             return self.serialize_enum
@@ -90,7 +89,7 @@ class Serializer:
             k: self.serialize(getattr(obj, k)) for k in get_type_hints(obj.__class__)
         }
 
-    def serialize_sequence(self, obj: collections.Sequence):
+    def serialize_sequence(self, obj: abc.Sequence):
         """
         Sequences are converted to regular lists, and each item of the list
         is recursively serialized.
@@ -133,7 +132,7 @@ class Serializer:
 
         return dict(ChainMap(*[*_get_values()]))
 
-    def serialize_mapping(self, obj: collections.Mapping):
+    def serialize_mapping(self, obj: abc.Mapping):
         """
         Mappings are just copied into another mapping. While copying, all the
         values are recursively serialized.
