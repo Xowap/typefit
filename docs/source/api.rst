@@ -310,6 +310,45 @@ including an actual method of the object.
 And finally, this example uses the ``@api.post`` decorator but the ``@api.put``
 and ``@api.patch`` are also available with the same syntax.
 
+JSON serialization
+++++++++++++++++++
+
+Since you've built nice model classes you might also want to use them in the
+``json`` argument that will be serialized into the request's body. The client
+automatically makes use of typefit's :py:func:`~.typefit.serialize.serialize`
+function to convert anything you pass through the ``json`` parameter. Let's
+change the previous example a little bit:
+
+.. code-block:: python
+
+    class SomeObj(NamedTuple):
+        foo: Text
+
+    class Bin(api.SyncClient):
+        BASE_URL = "https://httpbin.org/"
+
+        @api.post("post", json=lambda foo: SomeObj(foo))
+        def my_post_method(self, foo: Text) -> HttpPost:
+            pass
+
+    bin = Bin()
+    post = bin.my_post_method("bar")
+    assert post.json == {"foo": "bar"}
+
+Of course you can override the serializer being used and insert any serializer
+that you want. You could either extend
+:py:class:`~.typefit.serialize.Serializer` class or implement your own
+serializer, including using a Django Rest Framework serializer or making a
+simple pass-through function like this:
+
+.. code-block:: python
+
+    class MyApi(api.SyncClient):
+        # ... your code ...
+
+        def init_serializer(self):
+            return lambda x: x
+
 Other arguments and parameters
 ------------------------------
 
