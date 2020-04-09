@@ -124,13 +124,13 @@ class Serializer:
                 if field.metadata and "typefit_source" in field.metadata:
                     source: Source = field.metadata["typefit_source"]
                     yield {
-                        k: serialize(v)
+                        k: self.serialize(v)
                         for k, v in source.value_to_json(field.name, obj).items()
                     }
                 else:
-                    yield {field.name: serialize(getattr(obj, field.name))}
+                    yield {field.name: self.serialize(getattr(obj, field.name))}
 
-        return dict(ChainMap(*[*_get_values()]))
+        return dict(ChainMap(*_get_values()))
 
     def serialize_mapping(self, obj: abc.Mapping):
         """
