@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from typefit.fitting import _handle_mappings
+from typefit.fitting import typefit
 
 
 def test_mappings():
@@ -13,4 +13,4 @@ def test_mappings():
     class Bar(Foo):
         c: bool
 
-    assert _handle_mappings(Bar, {"a": 42, "b": "42", "c": True}) == Bar(42, "42", True)
+    assert typefit(Bar, {"a": 42, "b": "42", "c": True}) == Bar(42, "42", True)

@@ -196,6 +196,9 @@ The core typefit module only exposes one function.
 
 .. autofunction:: typefit.typefit
 
+.. autoclass:: typefit.Fitter
+   :members: fit, __init__
+
 Narrows
 +++++++
 
