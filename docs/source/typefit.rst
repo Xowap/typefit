@@ -210,7 +210,7 @@ one argument to their constructor which is the data structure to convert.
     :members:
 
 Meta
-+++++++
+++++
 
 The meta module allows to specify meta-information on fields and types in order
 to affect the way that `typefit` will deal with them.
