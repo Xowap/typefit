@@ -187,7 +187,7 @@ dotenv = ["python-dotenv"]
 category = "main"
 description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
 name = "h11"
-optional = true
+optional = false
 python-versions = "*"
 version = "0.8.1"
 
@@ -195,7 +195,7 @@ version = "0.8.1"
 category = "main"
 description = "HTTP/2 State-Machine based protocol implementation"
 name = "h2"
-optional = true
+optional = false
 python-versions = "*"
 version = "3.2.0"
 
@@ -207,7 +207,7 @@ hyperframe = ">=5.2.0,<6"
 category = "main"
 description = "Pure-Python HPACK header compression"
 name = "hpack"
-optional = true
+optional = false
 python-versions = "*"
 version = "3.0.0"
 
@@ -215,7 +215,7 @@ version = "3.0.0"
 category = "main"
 description = "Chromium HSTS Preload list as a Python package and updated daily"
 name = "hstspreload"
-optional = true
+optional = false
 python-versions = ">=3.6"
 version = "2020.4.7"
 
@@ -244,7 +244,7 @@ version = "*"
 category = "main"
 description = "The next generation HTTP client."
 name = "httpx"
-optional = true
+optional = false
 python-versions = ">=3.6"
 version = "0.7.8"
 
@@ -261,7 +261,7 @@ rfc3986 = ">=1.0.0,<2.0.0"
 category = "main"
 description = "HTTP/2 framing layer for Python"
 name = "hyperframe"
-optional = true
+optional = false
 python-versions = "*"
 version = "5.2.0"
 
@@ -432,13 +432,13 @@ description = "Utility library for gitignore style pattern matching of file path
 name = "pathspec"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-version = "0.7.0"
+version = "0.8.0"
 
 [[package]]
 category = "main"
 description = "Python datetimes made easy"
 name = "pendulum"
-optional = true
+optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 version = "2.1.0"
 
@@ -564,7 +564,7 @@ testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "requests", "xm
 category = "main"
 description = "Extensions to the standard Python datetime module"
 name = "python-dateutil"
-optional = true
+optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 version = "2.8.1"
 
@@ -583,7 +583,7 @@ version = "2019.3"
 category = "main"
 description = "The Olson timezone database for Python."
 name = "pytzdata"
-optional = true
+optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "2019.3"
 
@@ -638,7 +638,7 @@ socks = ["PySocks (>=1.5.6,<1.5.7 || >1.5.7)", "win-inet-pton"]
 category = "main"
 description = "Validating URI References per RFC 3986"
 name = "rfc3986"
-optional = true
+optional = false
 python-versions = "*"
 version = "1.4.0"
 
@@ -840,12 +840,8 @@ version = "3.1.0"
 docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
-[extras]
-api = ["httpx"]
-dates = ["pendulum"]
-
 [metadata]
-content-hash = "a9f1e2f4263bf6b2c37629817af112fada2183bf60223910c863279ad0c986ea"
+content-hash = "9eadd3a9f0b7b0ffd36385c106c9ac84ca2cf1247d3be89f3bb6e1961cd5fa67"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1087,8 +1083,8 @@ parso = [
     {file = "parso-0.6.2.tar.gz", hash = "sha256:0c5659e0c6eba20636f99a04f469798dca8da279645ce5c387315b2c23912157"},
 ]
 pathspec = [
-    {file = "pathspec-0.7.0-py2.py3-none-any.whl", hash = "sha256:163b0632d4e31cef212976cf57b43d9fd6b0bac6e67c26015d611a647d5e7424"},
-    {file = "pathspec-0.7.0.tar.gz", hash = "sha256:562aa70af2e0d434367d9790ad37aed893de47f1693e4201fd1d3dca15d19b96"},
+    {file = "pathspec-0.8.0-py2.py3-none-any.whl", hash = "sha256:7d91249d21749788d07a2d0f94147accd8f845507400749ea19c1ec9054a12b0"},
+    {file = "pathspec-0.8.0.tar.gz", hash = "sha256:da45173eb3a6f2a5a487efba21f050af2b41948be6ab52b6a1e3ff22bb8b7061"},
 ]
 pendulum = [
     {file = "pendulum-2.1.0-cp27-cp27m-macosx_10_13_x86_64.whl", hash = "sha256:9eda38ff65b1f297d860d3f562480e048673fb4b81fdd5c8c55decb519b97ed2"},
