@@ -8,13 +8,13 @@ Copyright © 2001-2019 Python Software Foundation; All Rights Reserved
 import collections
 
 # noinspection PyUnresolvedReferences,PyProtectedMember
-from typing import Generic, _GenericAlias
+from typing import Any, Generic, Tuple, _GenericAlias
 
 try:
     from typing import get_origin
 except ImportError:
 
-    def get_origin(tp):
+    def get_origin(tp) -> Any:
         """Get the unsubscripted version of a type.
 
         This supports generic types, Callable, Tuple, Union, Literal, Final and ClassVar.
@@ -39,7 +39,7 @@ try:
     from typing import get_args  # lgtm[py/unused-import]
 except ImportError:
 
-    def get_args(tp):
+    def get_args(tp) -> Tuple[Any, ...]:
         """Get type arguments with all substitutions performed.
 
         For unions, basic simplifications used by Union constructor are performed.
