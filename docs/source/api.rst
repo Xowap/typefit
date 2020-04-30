@@ -173,7 +173,7 @@ in the headers. Typefit provides you several ways to specify custom headers.
 
 .. code-block:: python
 
-    from httpx import models as hm
+    from typefit import httpx_models as hm
 
     class Bin(api.SyncClient):
         BASE_URL = "https://httpbin.org/"
@@ -195,10 +195,10 @@ evaluated before each call so you can change the return value over time.
 .. note::
 
     You'll notice that the ``headers()`` method's return type is
-    ``hm.HeaderTypes``. Here, ``hm`` is an alias of the ``httpx.models``
-    module, since the whole API client generator is based on
-    `httpx <https://github.com/encode/httpx>`_. The reasons behind that choice
-    over the extra-popular ``requests`` are multiple:
+    ``hm.HeaderTypes``. Here, ``hm`` is an alias of the
+    ``typefit.httpx_models`` module, since the whole API client generator is
+    based on `httpx <https://github.com/encode/httpx>`_. The reasons behind
+    that choice over the extra-popular ``requests`` are multiple:
 
     - ``httpx`` enforces timeouts while ``requests`` doesn't, which is
       dangerous since lingering requests can hang a thread or a process
@@ -404,7 +404,7 @@ This has been mentioned before but is worth repeating here.
 
 .. code-block:: python
 
-    from httpx import models as hm
+    from typefit import httpx_models as hm
 
     class Bin(api.SyncClient):
         BASE_URL = "https://httpbin.org/"

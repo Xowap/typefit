@@ -1,6 +1,7 @@
 from typing import List, NamedTuple, Optional, Text, Union
 
 from pytest import raises
+
 from typefit.fitting import typefit
 
 

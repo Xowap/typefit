@@ -1,6 +1,7 @@
 from random import shuffle
 
 from pytest import raises
+
 from typefit.utils import OrderedSet
 
 

@@ -4,8 +4,8 @@ from typing import Any, Callable, Dict, List, Optional, Text, Type, Union
 from urllib.parse import urljoin
 
 import httpx
-import httpx.models as hm
 
+from . import httpx_models as hm
 from .fitting import T, typefit
 from .serialize import SaneSerializer
 from .utils import UrlFormatter, callable_value

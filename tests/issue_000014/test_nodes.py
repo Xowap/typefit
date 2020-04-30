@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Text
 
 from pytest import fixture, raises
+
 from typefit.fitting import Fitter, FlatNode, ListNode, MappingNode
 
 

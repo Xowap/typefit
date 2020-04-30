@@ -1,6 +1,7 @@
 from enum import Enum
 
 from pytest import raises
+
 from typefit import typefit
 
 
