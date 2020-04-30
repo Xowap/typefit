@@ -45,6 +45,7 @@ Typefit provides several modules to help you.
    Building API clients <api>
    serialize
    reporting
+   changelog
 
 
 Indices and tables
