@@ -19,6 +19,6 @@ test:
 	poetry run pytest tests
 
 build:
-	poetry install -E api -E dates
+	poetry install
 	cd docs && poetry run make html
 	poetry run pip freeze | grep -v typefit > requirements.txt

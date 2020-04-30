@@ -1,25 +1,18 @@
 from typing import List, NamedTuple, Optional, Text, Union
 
 from pytest import raises
-from typefit.fitting import (
-    _handle,
-    _handle_list,
-    _handle_mappings,
-    _handle_none,
-    _handle_type,
-    _handle_union,
-    typefit,
-)
+
+from typefit.fitting import typefit
 
 
 def test_handle_type():
     with raises(ValueError):
-        assert _handle_type(int, "42") == 42
+        assert typefit(int, "42") == 42
 
-    assert _handle_type(float, 42) == 42.0
+    assert typefit(float, 42) == 42.0
 
     with raises(ValueError):
-        _handle_type(int, "xxx")
+        typefit(int, "xxx")
 
     class SomeType:
         def __init__(self, value: str):
@@ -31,20 +24,7 @@ def test_handle_type():
 
             return self.value == other.value
 
-    assert _handle_type(SomeType, "foo") == SomeType("foo")
-
-
-def test_handle():
-    def h_yes(t, value):
-        return value
-
-    def h_no(t, value):
-        raise ValueError
-
-    assert _handle([h_no, h_no, h_yes], int, 42) == 42
-
-    with raises(ValueError):
-        _handle([h_no, h_no], int, "xxx")
+    assert typefit(SomeType, "foo") == SomeType("foo")
 
 
 def test_typefit():
@@ -71,27 +51,27 @@ def test_typefit():
 
 def test_handle_union():
     t = Union[int, str]
-    assert _handle_union(t, 42) == 42
-    assert _handle_union(t, "xxx") == "xxx"
+    assert typefit(t, 42) == 42
+    assert typefit(t, "xxx") == "xxx"
 
     with raises(ValueError):
-        _handle_union(Union[int, float], "xxx")
+        typefit(Union[int, float], "xxx")
 
 
 def test_handle_list():
     t = List[List[int]]
     v = [[1, 2, 3], [4, 5, 6]]
 
-    assert _handle_list(t, v) == v
+    assert typefit(t, v) == v
 
     with raises(ValueError):
-        _handle_list(List, v)
+        typefit(List, v)
 
     with raises(ValueError):
-        _handle_list(Union, v)
+        typefit(Union, v)
 
     with raises(ValueError):
-        _handle_list(t, 42)
+        typefit(t, 42)
 
 
 def test_named_tuple():
@@ -99,18 +79,18 @@ def test_named_tuple():
         a: int
         b: Text
 
-    assert _handle_mappings(Foo, {"a": 42, "b": "hello"}) == Foo(42, "hello")
+    assert typefit(Foo, {"a": 42, "b": "hello"}) == Foo(42, "hello")
 
     with raises(ValueError):
-        _handle_mappings(None, {})
+        typefit(None, {})
 
     with raises(ValueError):
-        _handle_mappings(Foo, None)
+        typefit(Foo, None)
 
 
 def test_handle_none():
-    assert _handle_none(None, None) is None
-    assert _handle_none(None.__class__, None) is None
+    assert typefit(None, None) is None
+    assert typefit(None.__class__, None) is None
 
 
 def test_none():

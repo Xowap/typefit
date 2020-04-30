@@ -4,8 +4,8 @@ from typing import Any, Callable, Dict, List, Optional, Text, Type, Union
 from urllib.parse import urljoin
 
 import httpx
-import httpx.models as hm
 
+from . import httpx_models as hm
 from .fitting import T, typefit
 from .serialize import SaneSerializer
 from .utils import UrlFormatter, callable_value
@@ -368,7 +368,7 @@ class _SyncClientHelper:
         data = self.client.decode(r, hint)
         data = self.client.extract(data, hint)
 
-        return typefit(data_type, data)
+        return self.client.typefit(data_type, data)
 
 
 class SyncClient:
@@ -382,6 +382,16 @@ class SyncClient:
     def __init__(self):
         self.helper = _SyncClientHelper(self)
         self.serialize = self.init_serialize()
+        self.typefit = self.init_typefit()
+
+    def init_typefit(self) -> Callable[[Type[T], Any], T]:
+        """
+        Uses :py:func:`~.typefit.typefit` by default, however you might want to
+        configure things differently, like the logging of errors. If you want
+        to do so, just override this method.
+        """
+
+        return typefit
 
     def init_serialize(self) -> Callable[[Any], Any]:
         """

@@ -1,229 +1,206 @@
-from dataclasses import fields, is_dataclass
+from collections import abc
 from enum import Enum
 from inspect import isclass
-from typing import Any, Callable, List, Type, TypeVar, Union, get_type_hints
+from typing import Any, Optional, Type, Union
 
 from .compat import get_args, get_origin
-from .meta import Source
-from .utils import get_single_param
-
-T = TypeVar("T")
+from .nodes import *
+from .reporting import ErrorReporter, LogErrorReporter, PrettyJson5Formatter
 
 
-def _handle_union(t: Type[T], value: Any) -> T:
+class Fitter:
     """
-    When the specified type is a Union, we typefit every type from the union
-    individually.
+    Core class responsible for the fitting of objects.
 
-    Let's also note that Optional[T] is equivalent to Union[T, None] and thus
-    it's this handler that manages optional things.
+    - Create an instance with the configuration you want
+    - Use the :py:meth:`~.fit` method to do your fittings
+
+    Notes
+    -----
+    Overall orchestrator of the fitting. A lot of the logic happens in the
+    nodes, but this class is responsible for executing the logic in the right
+    order and also holds configuration.
     """
 
-    if not (get_origin(t) is Union):
-        raise ValueError
+    def __init__(
+        self,
+        no_unwanted_keys: bool = False,
+        error_reporter: Optional[ErrorReporter] = None,
+    ):
+        """
+        Constructs the instance.
 
-    for sub_t in get_args(t):
+        Parameters
+        ----------
+        no_unwanted_keys
+            If set to ``True``, it will not be allowed to have unwanted keys
+            when fitting mappings into dataclasses/named tuples.
+        error_reporter
+            Error reporting for when a validation fails. By default no report
+            is made but you might want to arrange reporting for your needs,
+            otherwise you're going to be debugging in the blind.
+        """
+
+        self.no_unwanted_keys = no_unwanted_keys
+        self.error_reporter = error_reporter
+
+    def _as_node(self, value: Any):
+        """
+        Recursively transforms a value into a node.
+
+        Parameters
+        ----------
+        value
+            Any kind of JSON-decoded value (string, list, object, etc).
+        """
+
+        if isinstance(value, (int, float, str, bool)) or value is None:
+            return FlatNode(self, value)
+        elif isinstance(value, abc.Sequence):
+            return ListNode(self, value, [self._as_node(x) for x in value])
+        elif isinstance(value, abc.Mapping):
+            return MappingNode(
+                self, value, {k: self._as_node(v) for k, v in value.items()}
+            )
+        else:
+            raise ValueError
+
+    def _fit_union(self, t: Type[T], value: Node) -> T:
+        """
+        In case of a union, walk through all possible types and try them on
+        until one fits (fails otherwise).
+        """
+
+        for sub_t in get_args(t):
+            try:
+                return self.fit_node(sub_t, value)
+            except ValueError:
+                continue
+
+        value.fail("No matching type in Union")
+
+    def _fit_class(self, t: Type[T], value: Node) -> T:
+        """
+        Wrapper around the ``FlatNode``'s fit method.
+        """
+
+        if isinstance(value, FlatNode):
+            return value.fit(t)
+
+        value.fail(f"Node is not {t}")
+
+    def _fit_any(self, _: Type[T], value: Node) -> T:
+        """
+        That's here for consistency but let's be honest, this function is not
+        very useful.
+        """
+
+        return value.value
+
+    def _fit_none(self, _: Type[T], value: Node) -> T:
+        """
+        Does basic checks before returning None or raising an error
+        """
+
+        if value.value is None:
+            value.fit_success = True
+            return None
+
+        value.fail(f"Value is not None")
+
+    def _fit_enum(self, t: Type[T], value: Node) -> T:
+        """
+        Tries to find back the right enum value
+        """
+
         try:
-            return typefit(sub_t, value)
+            out = t(value.value)
         except ValueError:
-            continue
+            value.fail(f"No match in enum {t!r}")
+        else:
+            value.fit_success = True
+            return out
 
-    raise ValueError
+    def fit_node(self, t: Type[T], value: Node) -> T:
+        """
+        Tries to find the right fit according to the type you're trying to
+        match and the node type.
 
+        Notes
+        -----
+        The order of tests done in this code is very important. By example,
+        dataclasses would pass the ``isclass(t)`` test so ``MappingNode`` have
+        to be handled before that test.
 
-def _handle_list(t: Type[T], value: Any) -> T:
-    """
-    Handles a List type annotation. The value is expected to be a standard
-    Python list, iterables and other sequences might not work.
-    """
+        Parameters
+        ----------
+        t
+            Type you want to fit your node into
+        value
+            A node you want to fit into a type
 
-    if not (get_origin(t) is list):
-        raise ValueError
-    elif not isinstance(value, list):
-        raise ValueError
+        Raises
+        ------
+        ValueError
+        """
 
-    args = get_args(t)
-
-    if not args:
-        raise ValueError
-
-    return [typefit(args[0], x) for x in value]
-
-
-def _handle_type(t: Type[T], value: Any) -> T:
-    """
-    Handles cases where the type is some builtin type or some class.
-
-    If it's a builtin then the value is expected to be exactly of that type
-    (except for float that also accepts integers, because integers are floats
-    in JSON).
-
-    If it's a class it will look at the signature of the constructor. It must
-    have exactly one argument which is annotated with a simple type. This
-    allows to create "parsing" types, see the `typefit.narrows` module for
-    examples.
-    """
-
-    if not isclass(t):
-        raise ValueError
-
-    if t is int:
-        if not isinstance(value, int):
-            raise ValueError
-    elif t is float:
-        if not isinstance(value, (int, float)):
-            raise ValueError
-    elif t is str:
-        if not isinstance(value, str):
-            raise ValueError
-    elif t is bool:
-        if not isinstance(value, bool):
-            raise ValueError
-    else:
-        param = get_single_param(t)
-
-        if not isclass(param.annotation) or not isinstance(value, param.annotation):
-            raise ValueError
-
-    return t(value)
-
-
-def _handle_mappings(t: Type[T], value: Any) -> T:
-    """
-    This maps a dictionary into a type-annotated named tuple or dataclass. All
-    fields declared in the tuple/class must be found in the dictionary and
-    extra fields in the dictionary will be ignored.
-
-    So far, default values in the named tuple/class are not taken in account so
-    all fields are indeed required to be found in the dictionary (not just the
-    ones you want to set).
-    """
-
-    if not isclass(t):
-        raise ValueError
-
-    if not issubclass(t, tuple) and not is_dataclass(t):
-        raise ValueError
-
-    info = get_type_hints(t)
-
-    if not info:
-        raise ValueError
-
-    if not isinstance(value, dict):
-        raise ValueError
-
-    kwargs = {}
-    fields_sources = {}
-
-    if is_dataclass(t):
-        # noinspection PyDataclass
-        for field in fields(t):
-            if field.metadata and "typefit_source" in field.metadata:
-                source: Source = field.metadata["typefit_source"]
-                fields_sources[field.name] = source.value_from_json
-
-    for key, sub_t in info.items():
-        try:
-            if key in fields_sources:
-                sub_v = fields_sources[key](value)
+        if get_origin(t) is Union:
+            return self._fit_union(t, value)
+        elif t is Any:
+            return self._fit_any(t, value)
+        elif isinstance(value, (MappingNode, ListNode)):
+            return value.fit(t)
+        elif t is None or t is None.__class__:
+            return self._fit_none(t, value)
+        elif isclass(t):
+            if issubclass(t, Enum):
+                return self._fit_enum(t, value)
             else:
-                sub_v = value[key]
+                return self._fit_class(t, value)
+        else:
+            value.fail("Could not fit. This error can never be reached in theory.")
 
-            kwargs[key] = typefit(sub_t, sub_v)
-        except KeyError:
-            pass
+    def fit(self, t: Type[T], value: Any) -> T:
+        """
+        Fits data into a type. The data is expected to be JSON-decoded values
+        (strings, ints, bools, etc).
 
-    try:
-        return t(**kwargs)
-    except TypeError:
-        raise ValueError
+        On failure a ValueError will arise and if an error reporter is set it
+        will be sent the node to generate the error report.
 
+        Parameters
+        ----------
+        t
+            Type you want to fit the value into
+        value
+            Value you want to fit into a type
 
-def _handle_any(t: Type[T], value: Any) -> T:
-    """
-    If the type is Any then accept everything as-is
-    """
+        Raises
+        -------
+        ValueError
+        """
 
-    if t is not Any:
-        raise ValueError
+        node = self._as_node(value)
 
-    return value
-
-
-def _handle_dict(t: Type[T], value: Any) -> T:
-    """
-    Handles dictionaries. If the dictionary does not specify any types then
-    nothing is coerced and the dict is returned as-is. However if the dict is
-    defined with types (like Dict[Text, Text] by example) then the types are
-    coerced.
-    """
-
-    if get_origin(t) is not dict:
-        raise ValueError
-
-    if not isinstance(value, dict):
-        raise ValueError
-
-    key_t, value_t = get_args(t)
-
-    if isinstance(key_t, TypeVar) or isinstance(value_t, TypeVar):
-        return value
-    else:
-        return {typefit(key_t, k): typefit(value_t, v) for k, v in value.items()}
-
-
-def _handle_none(t: Type[T], value: Any) -> T:
-    """
-    If the type specification is either None or NoneType then we allow None
-    values.
-    """
-
-    if t is not None and t is not None.__class__:
-        raise ValueError
-
-    if value is not None:
-        raise ValueError
-
-    return None
-
-
-def _handle_enum(t: Type[T], value: Any) -> T:
-    """
-    Accept if the type is enum and return attribute of enum.
-    """
-
-    if not isclass(t):
-        raise ValueError
-
-    if not issubclass(t, Enum):
-        raise ValueError
-
-    return t(value)
-
-
-def _handle(handlers: List[Callable[[Type[T], Any], T]], t: Type[T], value: Any):
-    """
-    Given a list of handler functions, execute them in order and return the
-    value of the first one that doesn't raise a ValueError. If no conversion
-    can be found then a ValueError is raised.
-    """
-
-    for func in handlers:
         try:
-            return func(t, value)
+            return self.fit_node(t, node)
         except ValueError:
-            continue
-
-    raise ValueError
-
-
-_handlers = [func for name, func in locals().items() if name.startswith("_handle_")]
+            if self.error_reporter:
+                self.error_reporter.report(node)
+            raise
 
 
 def typefit(t: Type[T], value: Any) -> T:
     """
     Fits a JSON-decoded value into native Python type-annotated objects.
+
+    This uses the default sane settings but it might not be up to your taste.
+    By example, errors will be reported in the logging module using ANSI escape
+    codes for syntactical coloration, however depending on the situation you
+    might not want that.
+
+    If you want more flexibility and configuration, you can use the
+    :py:class:`~.Fitter` directly.
 
     Parameters
     ----------
@@ -249,6 +226,14 @@ def typefit(t: Type[T], value: Any) -> T:
     ------
     ValueError
         When the fitting cannot be done, a :class:`ValueError` is raised.
+
+    See Also
+    --------
+    Fitter.fit
     """
 
-    return _handle(_handlers, t, value)
+    return Fitter(
+        error_reporter=LogErrorReporter(
+            formatter=PrettyJson5Formatter(colors="terminal16m")
+        )
+    ).fit(t, value)

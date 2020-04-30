@@ -5,9 +5,10 @@ from json import JSONDecodeError
 from typing import Any, Dict, List, NamedTuple, Optional, Text, Union
 
 import httpx
-import httpx.models as hm
 from pytest import fixture, raises
+
 from typefit import api
+from typefit import httpx_models as hm
 
 from .httpbin_utils import HttpBin, find_free_port, wait_for_port
 

@@ -1,30 +1,13 @@
-from inspect import Parameter, signature
+import re
+from collections import abc
+from inspect import Parameter, isclass, signature
 from string import Formatter
-from typing import Any, Callable, Dict, Text
+from typing import Any, Callable, Dict, Generic, Iterator, Text, TypeVar
 from urllib.parse import quote_plus
 
+CLASS_RE = re.compile(r"<class '([^']+)'>")
 
-def get_single_param(func) -> Parameter:
-    """
-    Returns the single first parameter of callable. Raises a value error if
-    there is more or less than 1 parameter and checks that the parameter has
-    a proper type annotation.
-    """
-
-    sig = signature(func)
-
-    if len(sig.parameters) != 1:
-        raise ValueError
-
-    param = list(sig.parameters.values())[0]
-
-    if param.kind not in {Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD}:
-        raise ValueError
-
-    if param.annotation is Parameter.empty:
-        raise ValueError
-
-    return param
+T = TypeVar("T")
 
 
 def loose_call(func: Callable, kwargs: Dict[Text, Any]):
@@ -71,3 +54,68 @@ class UrlFormatter(Formatter):
         out = super().format_field(value, format_spec)
         out = quote_plus(f"{out}")
         return out
+
+
+def is_named_tuple(value: Any) -> bool:
+    if isclass(value):
+        test = issubclass
+    else:
+        test = isinstance
+
+    return test(value, tuple) and hasattr(value, "_fields")
+
+
+class OrderedSet(Generic[T], abc.MutableSet):
+    """
+    Behaves exactly like a set() except that the objects will be kept in order
+    of insertion.
+
+    Notes
+    -----
+    Internally it relies on dictionaries keeping order. This means that this
+    will only work for Python 3.7+ (and CPython 3.6+).
+    """
+
+    def __init__(self, initial_data: Iterator[T] = tuple()):
+        self._set = {k: True for k in initial_data}
+
+    def add(self, x: T) -> None:
+        self._set[x] = True
+
+    def discard(self, x: T) -> None:
+        try:
+            del self._set[x]
+        except KeyError:
+            pass
+
+    def __contains__(self, x: object) -> bool:
+        return x in self._set
+
+    def __len__(self) -> int:
+        return len(self._set)
+
+    def __iter__(self) -> Iterator[T]:
+        yield from self._set
+
+
+def format_type_name(t: Any) -> Text:
+    """
+    Heuristics to make a type name look nice. It might change in the future.
+
+    Parameters
+    ----------
+    t
+        Type whose name you want to format
+    """
+
+    out = f"{t}"
+
+    m = CLASS_RE.match(out)
+
+    if m:
+        out = f"'{m.group(1)}'"
+
+    if out == "'NoneType'":
+        out = "'None'"
+
+    return out
