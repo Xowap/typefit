@@ -1,7 +1,7 @@
 [tool.poetry]
 
 name = "typefit"
-version = "0.2.0"
+version = "0.3.0"
 
 description = "Fits JSON values into Python type-anotated objects"
 license = "WTFPL"
@@ -34,3 +34,8 @@ importlib-metadata = "^0.23.0"
 isort = "^4.3"
 black = "^19.10b0"
 httpbin = "^0.7.0"
+
+[build-system]
+
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
