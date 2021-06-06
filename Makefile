@@ -1,24 +1,27 @@
-PYTHON_BIN ?= python
+PYTHON_BIN ?= poetry run python
 ENV ?= pypitest
 
 format: isort black
 
 black:
-	'$(PYTHON_BIN)' -m black --target-version py38 --exclude '/(\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist|node_modules|webpack_bundles)/' .
+	$(PYTHON_BIN) -m black --target-version py38 --exclude '/(\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist|node_modules|webpack_bundles)/' .
 
 isort:
-	'$(PYTHON_BIN)' -m isort -rc src
-	'$(PYTHON_BIN)' -m isort -rc tests
+	$(PYTHON_BIN) -m isort src
+	$(PYTHON_BIN) -m isort tests
 
 %.txt: %.in
-	'$(PYTHON_BIN)' -m piptools compile --generate-hashes $<
+	$(PYTHON_BIN) -m piptools compile --generate-hashes $<
 
 test: export PYTHONPATH=$(realpath example)
 
 test:
-	poetry run pytest tests
+	$(PYTHON_BIN) -m pytest tests
 
 build:
 	poetry install
 	cd docs && poetry run make html
-	poetry run pip freeze | grep -v typefit > requirements.txt
+	poetry run pip list --format=freeze | grep -v typefit > requirements.txt
+
+publish:
+	poetry publish --build
