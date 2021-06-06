@@ -22,3 +22,6 @@ build:
 	poetry install
 	cd docs && poetry run make html
 	poetry run pip list --format=freeze | grep -v typefit > requirements.txt
+
+publish:
+	poetry publish --build
