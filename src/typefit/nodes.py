@@ -150,7 +150,12 @@ class MappingNode(Node):
             Should be a dictionary specification, otherwise it's going to fail
         """
 
-        key_t, value_t = get_args(t)
+        args = get_args(t)
+
+        try:
+            key_t, value_t = args
+        except ValueError:
+            key_t, value_t = Text, Any
 
         if isinstance(key_t, TypeVar):
             key_t = Text

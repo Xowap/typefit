@@ -123,7 +123,10 @@ class PrettyJson5Formatter(ErrorFormatter):
     """
 
     def __init__(
-        self, indent: Text = "    ", colors: Text = "", truncate_strings_at: int = 40,
+        self,
+        indent: Text = "    ",
+        colors: Text = "",
+        truncate_strings_at: int = 40,
     ):
         self.indent = indent
         self.colors = colors

@@ -347,11 +347,17 @@ class _SyncClientHelper:
         method.
         """
 
+        cookies = self.cookies(cookies, kwargs)
+        old_cookies = None
+
+        if cookies:
+            old_cookies = self.http.cookies
+            self.http.cookies = cookies
+
         request_args = dict(
             url=self.url(path, kwargs),
             headers=self.headers(headers, kwargs),
             params=callable_value(params, kwargs),
-            cookies=self.cookies(cookies, kwargs),
             auth=self.auth(auth, kwargs),
             allow_redirects=self.allow_redirects(allow_redirects, kwargs),
         )
@@ -367,6 +373,9 @@ class _SyncClientHelper:
         self.client.raise_errors(r, hint)
         data = self.client.decode(r, hint)
         data = self.client.extract(data, hint)
+
+        if cookies:
+            self.http.cookies = old_cookies
 
         return self.client.typefit(data_type, data)
 
