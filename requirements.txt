@@ -36,7 +36,7 @@ pathspec==0.8.1
 pendulum==2.1.2
 pexpect==4.8.0
 pickleshare==0.7.5
-pip==21.0.1
+pip==21.1
 pluggy==0.13.1
 prompt-toolkit==3.0.18
 ptyprocess==0.7.0
