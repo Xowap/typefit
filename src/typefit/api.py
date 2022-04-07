@@ -25,8 +25,8 @@ Cookies = Union[None, hm.CookieTypes, CookiesFactory]
 AuthFactory = Callable[..., hm.AuthTypes]
 Auth = Union[None, hm.AuthTypes, AuthFactory]
 
-AllowRedirectsFactory = Callable[..., bool]
-AllowRedirects = Union[None, bool, AllowRedirectsFactory]
+FollowRedirectsFactory = Callable[..., bool]
+FollowRedirects = Union[None, bool, FollowRedirectsFactory]
 
 DataFactory = Callable[..., hm.RequestData]
 Data = Union[None, hm.RequestData, DataFactory]
@@ -49,7 +49,7 @@ def _make_decorator(
     headers: Headers = None,
     cookies: Cookies = None,
     auth: Auth = None,
-    allow_redirects: AllowRedirects = None,
+    follow_redirects: FollowRedirects = None,
     hint: Any = None,
 ) -> Callable[[Callable], Callable]:
     """
@@ -95,7 +95,7 @@ def _make_decorator(
                 headers=headers,
                 cookies=cookies,
                 auth=auth,
-                allow_redirects=allow_redirects,
+                follow_redirects=follow_redirects,
                 hint=hint,
                 kwargs=bound.arguments,
                 data_type=sig.return_annotation,
@@ -112,7 +112,7 @@ def get(
     headers: Headers = None,
     cookies: Cookies = None,
     auth: Auth = None,
-    allow_redirects: AllowRedirects = None,
+    follow_redirects: FollowRedirects = None,
     hint: Any = None,
 ):
     """
@@ -128,7 +128,7 @@ def get(
         headers=headers,
         cookies=cookies,
         auth=auth,
-        allow_redirects=allow_redirects,
+        follow_redirects=follow_redirects,
         hint=hint,
     )
 
@@ -142,7 +142,7 @@ def post(
     headers: Headers = None,
     cookies: Cookies = None,
     auth: Auth = None,
-    allow_redirects: AllowRedirects = None,
+    follow_redirects: FollowRedirects = None,
     hint: Any = None,
 ):
     """
@@ -161,7 +161,7 @@ def post(
         headers=headers,
         cookies=cookies,
         auth=auth,
-        allow_redirects=allow_redirects,
+        follow_redirects=follow_redirects,
         hint=hint,
     )
 
@@ -175,7 +175,7 @@ def put(
     headers: Headers = None,
     cookies: Cookies = None,
     auth: Auth = None,
-    allow_redirects: AllowRedirects = None,
+    follow_redirects: FollowRedirects = None,
     hint: Any = None,
 ):
     """
@@ -194,7 +194,7 @@ def put(
         headers=headers,
         cookies=cookies,
         auth=auth,
-        allow_redirects=allow_redirects,
+        follow_redirects=follow_redirects,
         hint=hint,
     )
 
@@ -208,7 +208,7 @@ def patch(
     headers: Headers = None,
     cookies: Cookies = None,
     auth: Auth = None,
-    allow_redirects: AllowRedirects = None,
+    follow_redirects: FollowRedirects = None,
     hint: Any = None,
 ):
     """
@@ -227,7 +227,7 @@ def patch(
         headers=headers,
         cookies=cookies,
         auth=auth,
-        allow_redirects=allow_redirects,
+        follow_redirects=follow_redirects,
         hint=hint,
     )
 
@@ -309,8 +309,8 @@ class _SyncClientHelper:
 
         return self.client.auth()
 
-    def allow_redirects(
-        self, override: AllowRedirects, kwargs: Dict[Text, Any]
+    def follow_redirects(
+        self, override: FollowRedirects, kwargs: Dict[Text, Any]
     ) -> bool:
         """
         Checks if the decorator attempts an override (by returning a non-None
@@ -322,7 +322,7 @@ class _SyncClientHelper:
         if ov is not None:
             return ov
 
-        return self.client.allow_redirects()
+        return self.client.follow_redirects()
 
     def request(
         self,
@@ -336,7 +336,7 @@ class _SyncClientHelper:
         headers: Headers = None,
         cookies: Cookies = None,
         auth: Auth = None,
-        allow_redirects: AllowRedirects = None,
+        follow_redirects: FollowRedirects = None,
         params: Params = None,
         hint: Any = None,
     ) -> T:
@@ -359,7 +359,7 @@ class _SyncClientHelper:
             headers=self.headers(headers, kwargs),
             params=callable_value(params, kwargs),
             auth=self.auth(auth, kwargs),
-            allow_redirects=self.allow_redirects(allow_redirects, kwargs),
+            follow_redirects=self.follow_redirects(follow_redirects, kwargs),
         )
 
         if method in {"post", "put", "patch"}:
@@ -441,7 +441,7 @@ class SyncClient:
         Inherit this to generate auth to be sent at each request
         """
 
-    def allow_redirects(self) -> bool:
+    def follow_redirects(self) -> bool:
         """
         Return False to disable redirects. Also, if a value is specified in the
         decorator then this value will be overridden.

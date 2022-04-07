@@ -535,10 +535,10 @@ override the output of the method.
     class Bin(api.SyncClient):
         BASE_URL = bin_url
 
-        def allow_redirects(self) -> bool:
+        def follow_redirects(self) -> bool:
             return False
 
-        @api.get("redirect/1", allow_redirects=True)
+        @api.get("redirect/1", follow_redirects=True)
         def redirect(self) -> HttpGet:
             pass
 
