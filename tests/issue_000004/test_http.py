@@ -1,10 +1,10 @@
 import re
 from base64 import b64decode
 from io import BytesIO
-from json import JSONDecodeError
 from typing import Any, Dict, List, NamedTuple, Optional, Text, Union
 
 import httpx
+from httpx import HTTPStatusError
 from pytest import fixture, raises
 
 from typefit import api
@@ -257,11 +257,11 @@ def test_allow_redirect_parametric(bin_url):
     class Bin(api.SyncClient):
         BASE_URL = bin_url
 
-        @api.get("redirect/1", allow_redirects=lambda: False)
+        @api.get("redirect/1", follow_redirects=lambda: False)
         def redirect(self) -> HttpGet:
             pass
 
-    with raises(JSONDecodeError):
+    with raises(HTTPStatusError):
         Bin().redirect()
 
 

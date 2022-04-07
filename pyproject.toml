@@ -1,7 +1,7 @@
 [tool.poetry]
 
 name = "typefit"
-version = "0.3.1"
+version = "0.4.0"
 
 description = "Fits JSON values into Python type-anotated objects"
 license = "WTFPL"
@@ -21,7 +21,7 @@ keywords = ["typing", "json", "api"]
 
 python = "^3.7"
 pendulum = "<3.0.0"
-httpx = ">=0.15,<2.0.0"
+httpx = ">=0.22,<2.0.0"
 pygments = "<3.0.0"
 
 
@@ -34,6 +34,7 @@ importlib-metadata = "^0.23.0"
 isort = "^5.8.0"
 black = "^21.5b2"
 httpbin = "^0.7.0"
+werkzeug = "<2.1.0"
 
 [build-system]
 
