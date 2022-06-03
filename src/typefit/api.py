@@ -232,6 +232,39 @@ def patch(
     )
 
 
+def delete(
+    path: Path,
+    data: Data = None,
+    files: Files = None,
+    json: Json = None,
+    params: Params = None,
+    headers: Headers = None,
+    cookies: Cookies = None,
+    auth: Auth = None,
+    follow_redirects: FollowRedirects = None,
+    hint: Any = None,
+):
+    """
+    Generates an API method that DELETE the URL, based on provided parameters
+    and method signature. The decorated method's code will never be called,
+    only the generated method will be used.
+    """
+
+    return _make_decorator(
+        "delete",
+        path=path,
+        data=data,
+        files=files,
+        json=json,
+        params=params,
+        headers=headers,
+        cookies=cookies,
+        auth=auth,
+        follow_redirects=follow_redirects,
+        hint=hint,
+    )
+
+
 class _SyncClientHelper:
     """
     Effector for all requests and parameters generation. It's separated from
