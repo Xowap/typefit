@@ -235,7 +235,6 @@ def patch(
 def delete(
     path: Path,
     data: Data = None,
-    files: Files = None,
     json: Json = None,
     params: Params = None,
     headers: Headers = None,
@@ -254,7 +253,6 @@ def delete(
         "delete",
         path=path,
         data=data,
-        files=files,
         json=json,
         params=params,
         headers=headers,
