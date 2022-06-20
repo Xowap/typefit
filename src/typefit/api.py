@@ -1,5 +1,3 @@
-import traceback
-import warnings
 from functools import wraps
 from inspect import signature
 from typing import Any, Callable, Dict, List, Optional, Text, Type, Union
@@ -408,10 +406,8 @@ class _SyncClientHelper:
 
         r: hm.Response = getattr(self.http, method)(**request_args)
 
-        try:
+        if self.on_response and r:
             self.on_response(r._request, r)
-        except:
-            pass
 
         self.client.raise_errors(r, hint)
         data = self.client.decode(r, hint)
@@ -533,5 +529,6 @@ class SyncClient:
         logic is applied. Results are ignored and errors too (silently).
         Use this method to inspect the request or the response (eg: log some
         request info for debug purposes).
+
         Modification of either of the objects is strongly discouraged.
         """
