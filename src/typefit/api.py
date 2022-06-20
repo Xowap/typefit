@@ -1,3 +1,5 @@
+import traceback
+import warnings
 from functools import wraps
 from inspect import signature
 from typing import Any, Callable, Dict, List, Optional, Text, Type, Union
@@ -37,6 +39,9 @@ Files = Union[None, hm.RequestFiles, FilesFactory]
 JsonType = Union[Dict[Text, "JsonType"], List["JsonType"], int, float, bool, Text, None]
 JsonFactory = Callable[..., hm.RequestFiles]
 Json = Union[None, JsonType, JsonFactory]
+
+
+OnResponse = Callable[[hm.Request, hm.Response], None]
 
 
 def _make_decorator(
@@ -273,6 +278,7 @@ class _SyncClientHelper:
     def __init__(self, client: "SyncClient"):
         self.client = client
         self.http = httpx.Client()
+        self.on_response: Optional[OnResponse] = None
 
     def close(self):
         """
@@ -400,7 +406,13 @@ class _SyncClientHelper:
                 json=self.client.serialize(callable_value(json, kwargs)),
             )
 
-        r = getattr(self.http, method)(**request_args)
+        r: hm.Response = getattr(self.http, method)(**request_args)
+
+        try:
+            self.on_response(r._request, r)
+        except:
+            pass
+
         self.client.raise_errors(r, hint)
         data = self.client.decode(r, hint)
         data = self.client.extract(data, hint)
@@ -421,6 +433,7 @@ class SyncClient:
 
     def __init__(self):
         self.helper = _SyncClientHelper(self)
+        self.helper.on_response = self.on_response
         self.serialize = self.init_serialize()
         self.typefit = self.init_typefit()
 
@@ -513,3 +526,12 @@ class SyncClient:
         """
 
         return data
+
+    def on_response(self, request: hm.Request, response: hm.Response) -> None:
+        """
+        This method is called when the response is received, before any typefit
+        logic is applied. Results are ignored and errors too (silently).
+        Use this method to inspect the request or the response (eg: log some
+        request info for debug purposes).
+        Modification of either of the objects is strongly discouraged.
+        """
