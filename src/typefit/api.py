@@ -526,7 +526,7 @@ class SyncClient:
     def on_response(self, request: hm.Request, response: hm.Response) -> None:
         """
         This method is called when the response is received, before any typefit
-        logic is applied. Results are ignored and errors too (silently).
+        logic is applied. Results are ignored.
         Use this method to inspect the request or the response (eg: log some
         request info for debug purposes).
 
