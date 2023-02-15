@@ -67,6 +67,6 @@ toml==0.10.2
 traitlets==5.0.5
 urllib3==1.26.5
 wcwidth==0.2.5
-Werkzeug==2.0.1
+Werkzeug==2.2.3
 wheel==0.36.2
 zipp==3.4.1
