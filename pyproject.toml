@@ -34,7 +34,7 @@ importlib-metadata = "^0.23.0"
 isort = "^5.8.0"
 black = "^21.5b2"
 httpbin = "^0.7.0"
-werkzeug = "<2.1.0"
+werkzeug = "<2.3.0"
 
 [build-system]
 
