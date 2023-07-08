@@ -1,6 +1,7 @@
 from collections import abc
 from enum import Enum
 from inspect import isclass
+from types import UnionType
 from typing import (
     Any,
     Callable,
@@ -177,15 +178,17 @@ class Fitter:
         ValueError
         """
 
-        if get_origin(t) is Union:
+        origin = get_origin(t)
+
+        if origin is Union or origin is UnionType:
             return self._fit_union(t, value)
         elif t is Any:
             return self._fit_any(t, value)
         elif isinstance(value, (MappingNode, ListNode)):
             return value.fit(t)
-        elif t is None or t is None.__class__:
+        elif t is None or t is None.__class__:  # noqa
             return self._fit_none(t, value)
-        elif get_origin(t) is Literal:
+        elif origin is Literal:
             return self._fit_literal(t, value)
         elif isclass(t):
             if issubclass(t, Enum):
@@ -248,7 +251,9 @@ class Fitter:
             return out
 
 
-def typefit(t: Type[T], value: Any, context: Optional[Mapping[str, Any]] = None) -> T:
+def typefit(
+    t: Type[T] | UnionType, value: Any, context: Optional[Mapping[str, Any]] = None
+) -> T:
     """
     Fits a JSON-decoded value into native Python type-annotated objects.
 
