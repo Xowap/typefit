@@ -1,15 +1,19 @@
 from dataclasses import dataclass, field, fields, is_dataclass
-from inspect import Parameter, isclass, signature
+from inspect import Parameter, Signature, isclass, signature
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Dict,
+    Iterable,
     List,
     Mapping,
+    MutableSequence,
     Optional,
+    Sequence,
     Set,
     Text,
+    Tuple,
     Type,
     TypeVar,
     get_type_hints,
@@ -205,6 +209,20 @@ class MappingNode(Node):
         self.fit_success = True
         return out
 
+    def value_from_context(self, key: str) -> Callable[[], Any]:
+        """
+        Encapsulates the logic that we're gonna give to the LiteralNode
+        when doing context injection
+        """
+
+        def get_value() -> Any:
+            try:
+                return self.context[key]
+            except KeyError as e:
+                raise ValueError(f"Key {key!r} is missing from the context") from e
+
+        return get_value
+
     def fit_object(self, t: Type[T]) -> T:
         """
         Fitting into dataclasses and named tuples. On paper that's fairly
@@ -245,41 +263,114 @@ class MappingNode(Node):
         sig = signature(t)
         hints = get_type_hints(t)
 
-        kwargs = {}
+        fields_injections, fields_sources, root_fields = self.parse_dataclass(t)
+
+        (
+            expected,
+            failed_keys,
+            kwargs,
+            literal_nodes,
+            required,
+        ) = self.make_constructor_kwargs(fields_injections, fields_sources, hints, sig)
+
+        missing = required - set(kwargs) - set(failed_keys)
+        unwanted = set(self.children) - expected
+        errors = []
+
+        self.report_missing(errors, missing)
+        self.report_unwanted(errors, t, unwanted)
+        self.report_failed(errors, failed_keys, fields_injections, literal_nodes)
+
+        if errors:
+            self.problem_is_kids = True
+            self.fail(". ".join([f"Wrong keys set for {format_type_name(t)}", *errors]))
+
+        return self.make_out_instance(kwargs, root_fields, t)
+
+    def parse_dataclass(
+        self, t: Type[T]
+    ) -> Tuple[
+        Mapping[str, Any],
+        Mapping[str, Callable[[Mapping[str, Any]], Any]],
+        Sequence[str],
+    ]:
+        """
+        If the expected type is a dataclass, there might be some metadata on
+        the fields. Which helps for example to source a field from a different
+        field name or to inject context into given fields. We're extracting
+        all this metadata from here (if relevant).
+
+        Parameters
+        ----------
+        t
+            The type of the object that we're instantiating
+        """
+
+        root_fields = []
         fields_sources = {}
         fields_injections = {}
+
+        if not is_dataclass(t):
+            return fields_injections, fields_sources, root_fields
+
+        for t_field in fields(t):
+            match (t_field.metadata):
+                case {"typefit_source": source}:
+                    fields_sources[t_field.name] = source.value_from_json
+                case {"typefit_from_context": key}:
+                    fields_injections[t_field.name] = self.value_from_context(key)
+                case {"typefit_inject_root": True}:
+                    fields_injections[t_field.name] = None
+                    root_fields.append(t_field.name)
+
+        return fields_injections, fields_sources, root_fields
+
+    def make_constructor_kwargs(
+        self,
+        fields_injections: Mapping[str, Any],
+        fields_sources: Mapping[str, Callable[[Mapping[str, Any]], Any]],
+        hints: Any,
+        sig: Signature,
+    ) -> Tuple[
+        Set[str],
+        Sequence[str],
+        Mapping[str, Any],
+        Mapping[str, "LiteralNode"],
+        Set[str],
+    ]:
+        """
+        We're going through every field of the constructor's signature and we
+        try to fit the corresponding value from the input JSON.
+
+        We only support parameters that can be called by keyword, as this is
+        what we're getting from a mapping type.
+
+        For each field we got three possibilities:
+
+        - The field has some meta mapping (most likely to get its value from
+          another field) in which case we call the mapping function
+        - Or it is subject to some kind of injection (either root or context),
+          which requires to wrap the mapped value into a LiteralNode and to
+          continue the resolution like that
+        - Or finally it's a normal node and we just get its value
+
+        Parameters
+        ----------
+        fields_injections
+            The mapping of keys to the injection functions
+        fields_sources
+            The mapping of keys to the mapping functions
+        hints
+            The type hints of the constructor
+        sig
+            The signature of the constructor
+        """
+
+        literal_nodes: Dict[str, LiteralNode] = {}
+        kwargs = {}
         required = set()
         expected = set()
         failed_keys = []
-        root_fields = []
-
-        def value_from_context(_key: str) -> Callable[[], Any]:
-            """
-            Encapsulates the logic that we're gonna give to the LiteralNode
-            when doing context injection
-            """
-
-            def get_value() -> Any:
-                try:
-                    return self.context[_key]
-                except KeyError as e:
-                    raise ValueError(f"Key {_key!r} is missing from the context") from e
-
-            return get_value
-
-        if is_dataclass(t):
-            # noinspection PyDataclass
-            for t_field in fields(t):
-                match (t_field.metadata):
-                    case {"typefit_source": source}:
-                        fields_sources[t_field.name] = source.value_from_json
-                    case {"typefit_from_context": key}:
-                        fields_injections[t_field.name] = value_from_context(key)
-                    case {"typefit_inject_root": True}:
-                        fields_injections[t_field.name] = None
-                        root_fields.append(t_field.name)
-
-        literal_nodes: Dict[str, LiteralNode] = {}
 
         param: Parameter
         for param in sig.parameters.values():
@@ -313,13 +404,43 @@ class MappingNode(Node):
                 except ValueError:
                     failed_keys.append(param.name)
 
-        missing = required - set(kwargs) - set(failed_keys)
-        unwanted = set(self.children) - expected
-        errors = []
+        return expected, failed_keys, kwargs, literal_nodes, required
+
+    def report_missing(
+        self, errors: MutableSequence[str], missing: Iterable[str]
+    ) -> None:
+        """
+        Some keys might be missing from the input JSON. This is where we do
+        the check and report them.
+
+        Parameters
+        ----------
+        errors
+            Output errors list
+        missing
+            The list of missing keys
+        """
 
         if missing:
             self.missing_keys = [*missing]
             errors.append(f'Missing keys: {", ".join(repr(x) for x in missing)}')
+
+    def report_unwanted(
+        self, errors: MutableSequence[str], t: Type[T], unwanted: Iterable[str]
+    ) -> None:
+        """
+        There is an option to report unwanted keys as errors. This is where
+        we do the check.
+
+        Parameters
+        ----------
+        errors
+            Output errors list
+        t
+            The type of the object that we're instantiating
+        unwanted
+            The list of unwanted keys
+        """
 
         if self.fitter.no_unwanted_keys and unwanted:
             self.unwanted_keys = [*unwanted]
@@ -327,6 +448,38 @@ class MappingNode(Node):
 
             for k in unwanted:
                 self.children[k].errors.add(f"Unwanted by {format_type_name(t)}")
+
+    def report_failed(
+        self,
+        errors: MutableSequence[str],
+        failed_keys: Sequence[str],
+        fields_injections: Mapping[str, Any],
+        literal_nodes: Mapping[str, "LiteralNode"],
+    ) -> None:
+        """
+        If any sub-key failed to fit, we're going to report the error. One
+        of two thing might have happened:
+
+        - A "normal" key failed, aka it was impossible to fit the JSON value
+          into the expected type.
+        - An injection failed (in theory either root or context injection but
+          in practice it's only context injection that can fail). In that case
+          we'll report the error at this level as the goal is to be able to
+          display the error on the input JSON and since it's an injection the
+          value is not in the input JSON. Thus, the error will have to be
+          displayed at the level of the parent node (aka this node).
+
+        Parameters
+        ----------
+        errors
+            Some output list which will contain errors
+        failed_keys
+            The list of keys that failed to fit
+        fields_injections
+            The mapping of keys to the injection functions
+        literal_nodes
+            The mapping of keys to the literal nodes
+        """
 
         if failed_keys:
             if normal_failed_keys := set(failed_keys) - fields_injections.keys():
@@ -339,9 +492,26 @@ class MappingNode(Node):
                     for error in literal_nodes[key].errors:
                         errors.append(error)
 
-        if errors:
-            self.problem_is_kids = True
-            self.fail(". ".join([f"Wrong keys set for {format_type_name(t)}", *errors]))
+    def make_out_instance(
+        self, kwargs: Mapping[str, Any], root_fields: Sequence[str], t: Type[T]
+    ) -> T:
+        """
+        Generates the output instance from the kwargs.
+
+        Additionally this function has the mission to report into which fields
+        the root should be injected (if any). We know this from the root_fields
+        parameter which comes from the dataclass parsing logic in
+        :py:meth:`~.parse_dataclass`.
+
+        Parameters
+        ----------
+        kwargs
+            The kwargs that are going to be passed to the constructor
+        root_fields
+            The fields into which the root should be injected
+        t
+            The type of the object that we're instantiating
+        """
 
         out = t(**kwargs)
         self.fit_success = True

@@ -1,15 +1,7 @@
 from collections import abc
 from enum import Enum
 from inspect import isclass
-from typing import (
-    Any,
-    Callable,
-    Mapping,
-    MutableSequence,
-    Optional,
-    Type,
-    Union,
-)
+from typing import Any, Callable, Mapping, MutableSequence, Optional, Type, Union
 
 from .compat import get_args, get_origin
 from .nodes import *
