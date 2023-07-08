@@ -16,6 +16,10 @@ homepage = "https://github.com/Xowap/typefit/"
 
 keywords = ["typing", "json", "api"]
 
+packages = [
+    { include = "typefit", from = "src" }
+]
+
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -61,6 +65,9 @@ ignore = ["F405", "F403"]
 "tests/issue_000014/test_format.py" = ["E501"]
 "tests/issue_000050/test_context.py" = ["E501"]
 "tests/*" = ["S"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests", "example"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "setuptools"]
