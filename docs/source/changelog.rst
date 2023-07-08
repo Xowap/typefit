@@ -6,6 +6,19 @@ Pre-1.0 Releases
 
 Before version 1.0, everything is experimental and can change at any time.
 
+Version 0.5.2
+~~~~~~~~~~~~~
+
+Added missing support:
+
+- Support for :code:`UnionType` (#52)
+- Support for :code:`Literal` (#18)
+
+Version 0.5.1
+~~~~~~~~~~~~~
+
+Released for CI/CD reasons but no code change.
+
 Version 0.5.0
 ~~~~~~~~~~~~~
 
