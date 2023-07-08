@@ -1,7 +1,16 @@
 from collections import abc
 from enum import Enum
 from inspect import isclass
-from typing import Any, Callable, Mapping, MutableSequence, Optional, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Literal,
+    Mapping,
+    MutableSequence,
+    Optional,
+    Type,
+    Union,
+)
 
 from .compat import get_args, get_origin
 from .nodes import *
@@ -131,6 +140,20 @@ class Fitter:
             value.fit_success = True
             return out
 
+    def _fit_literal(self, t: Type[T], value: Node) -> T:
+        """
+        Tries to find back the right literal value
+        """
+
+        if get_origin(t) is not Literal:
+            value.fail(f"Type {t!r} is not a literal")
+
+        if value.value in get_args(t):
+            value.fit_success = True
+            return value.value
+
+        raise value.fail(f"No match in literal {t!r} (got {value!r})")
+
     def fit_node(self, t: Type[T], value: Node) -> T:
         """
         Tries to find the right fit according to the type you're trying to
@@ -162,6 +185,8 @@ class Fitter:
             return value.fit(t)
         elif t is None or t is None.__class__:
             return self._fit_none(t, value)
+        elif get_origin(t) is Literal:
+            return self._fit_literal(t, value)
         elif isclass(t):
             if issubclass(t, Enum):
                 return self._fit_enum(t, value)
