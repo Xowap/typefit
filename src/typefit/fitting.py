@@ -153,7 +153,7 @@ class Fitter:
             value.fit_success = True
             return value.value
 
-        raise value.fail(f"No match in literal {t!r} (got {value!r})")
+        raise value.fail(f"No match in literal {t!r} (got {value.value!r})")
 
     def fit_node(self, t: Type[T], value: Node) -> T:
         """
