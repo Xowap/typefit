@@ -1,8 +1,7 @@
 # TypeFit
 
 [![Read the Docs](https://img.shields.io/readthedocs/typefit)](http://typefit.rtfd.io/)
-[![Build Status](https://img.shields.io/travis/Xowap/typefit)](https://travis-ci.org/Xowap/typefit)
-[![LGTM Grade](https://img.shields.io/lgtm/grade/python/github/Xowap/typefit)](https://lgtm.com/projects/g/Xowap/typefit/)
+[![Build Status](https://github.com/Xowap/typefit/actions/workflows/run-tests.yaml/badge.svg)](https://github.com/Xowap/typefit/actions/workflows/run-tests.yaml)
 
 Typing annotations make Python awesome, however it's complicated to keep your
 data annotated when it comes from external sources like APIs. The goal of
