@@ -184,7 +184,7 @@ class Fitter:
             return self._fit_union(t, value)
         elif t is Any:
             return self._fit_any(t, value)
-        elif isinstance(value, (MappingNode, ListNode)):
+        elif isinstance(value, (MappingNode, ListNode, LiteralNode)):
             return value.fit(t)
         elif t is None or t is None.__class__:
             return self._fit_none(t, value)

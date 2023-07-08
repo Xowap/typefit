@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Mapping
 
 from pytest import raises
 
@@ -18,6 +19,17 @@ class Child:
 class Root:
     child: Child
     _foo: int = field(metadata=meta(context="foo"))
+
+
+@dataclass
+class B:
+    val: int
+    foo: Mapping[str, str] = field(metadata=meta(context="foo"))
+
+
+@dataclass
+class A:
+    val: Mapping[str, Mapping[str, B]]
 
 
 class TestErrorReporter(ErrorReporter):
@@ -57,6 +69,25 @@ def test_root_injection():
     )
 
     assert x.child._root is x
+
+
+def test_context_mapping_injection():
+    a: A = typefit(
+        A,
+        dict(
+            val=dict(
+                foo=dict(
+                    bar=dict(
+                        val=42,
+                    )
+                ),
+            ),
+        ),
+        context=dict(foo=dict(hello="world")),
+    )
+
+    assert a.val["foo"]["bar"].val == 42
+    assert a.val["foo"]["bar"].foo["hello"] == "world"
 
 
 def test_context_injection_fail():
