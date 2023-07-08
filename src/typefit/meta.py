@@ -15,7 +15,7 @@ class Source(NamedTuple):
 
 def meta(
     source: Optional[Source] = None,
-    is_root: bool = False,
+    inject_root: bool = False,
     context: Optional[str] = None,
 ):
     """
@@ -37,7 +37,7 @@ def meta(
         Source function, that given the mapping as input will provide the
         value as output. If the value isn't found in the mapping, a KeyError
         should arise.
-    is_root
+    inject_root
         Whether or not Typefit should inject the root object into the field.
         This is useful when you want to have a reference to the root object
         from a child object.
@@ -49,14 +49,14 @@ def meta(
 
     out = {}
 
-    if sum([is_root, context is not None, source is not None]) > 1:
-        raise ValueError("Only one of is_root, context and source can be provided.")
+    if sum([inject_root, context is not None, source is not None]) > 1:
+        raise ValueError("Only one of inject_root, context and source can be provided.")
 
     if source:
         out["typefit_source"] = source
 
-    if is_root:
-        out["typefit_is_root"] = True
+    if inject_root:
+        out["typefit_inject_root"] = True
 
     if context:
         out["typefit_from_context"] = context

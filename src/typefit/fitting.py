@@ -1,7 +1,7 @@
 from collections import abc
 from enum import Enum
 from inspect import isclass
-from typing import Any, Mapping, Optional, Type, Union
+from typing import Any, Callable, Mapping, MutableSequence, Optional, Type, Union
 
 from .compat import get_args, get_origin
 from .nodes import *
@@ -49,6 +49,7 @@ class Fitter:
         self.no_unwanted_keys = no_unwanted_keys
         self.error_reporter = error_reporter
         self.context = context or {}
+        self.root_injectors: MutableSequence[Callable[[Any], None]] = []
 
     def _as_node(self, value: Any):
         """
@@ -177,6 +178,24 @@ class Fitter:
         On failure a ValueError will arise and if an error reporter is set it
         will be sent the node to generate the error report.
 
+        Notes
+        -----
+        You'll notice down there some "root_injector" business and might wonder
+        what the fuck is this. We have a feature that allows to inject the
+        "root" object (aka the one that we're about to return) into marked
+        fields down the line. However all the child objects are built before
+        the root is built itself. As a result, all those fields are initially
+        filled up by "None" and then when we finally have our root object
+        constructed we go back into each of those objects to set correct
+        values.
+
+        In order to do this in an orthogonal way, each node has the possibility
+        every time they encounter a place to inject a root field to add a
+        callable (which is obviously gonna be a 2nd-order function) into the
+        `root_injectors` attribute of this class. Meaning that at this point
+        all we got to do is to call all the root injectors (no need to recurse
+        into anything, yay).
+
         Parameters
         ----------
         t
@@ -192,11 +211,16 @@ class Fitter:
         node = self._as_node(value)
 
         try:
-            return self.fit_node(t, node)
+            out = self.fit_node(t, node)
         except ValueError:
             if self.error_reporter:
                 self.error_reporter.report(node)
             raise
+        else:
+            for injector in self.root_injectors:
+                injector(out)
+
+            return out
 
 
 def typefit(t: Type[T], value: Any, context: Optional[Mapping[str, Any]] = None) -> T:

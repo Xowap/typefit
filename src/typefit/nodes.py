@@ -28,6 +28,22 @@ __all__ = ["T", "Node", "MappingNode", "ListNode", "FlatNode", "LiteralNode"]
 T = TypeVar("T")
 
 
+def set_root_attr(obj: Any, attr: str):
+    """
+    2nd-order function to set the root object into `obj`'s attribute `attr`.
+    See :py:meth:`typefit.fitting.Fitter.fit` for more information.
+
+    See Also
+    --------
+    typefit.fitting.Fitter.fit
+    """
+
+    def do_it(value: Any):
+        object.__setattr__(obj, attr, value)
+
+    return do_it
+
+
 @dataclass
 class Node:
     """
@@ -235,6 +251,7 @@ class MappingNode(Node):
         required = set()
         expected = set()
         failed_keys = []
+        root_fields = []
 
         def value_from_context(_key: str) -> Callable[[], Any]:
             """
@@ -258,6 +275,9 @@ class MappingNode(Node):
                         fields_sources[t_field.name] = source.value_from_json
                     case {"typefit_from_context": key}:
                         fields_injections[t_field.name] = value_from_context(key)
+                    case {"typefit_inject_root": True}:
+                        fields_injections[t_field.name] = None
+                        root_fields.append(t_field.name)
 
         literal_nodes: Dict[str, LiteralNode] = {}
 
@@ -325,6 +345,10 @@ class MappingNode(Node):
 
         out = t(**kwargs)
         self.fit_success = True
+
+        for field_name in root_fields:
+            self.fitter.root_injectors.append(set_root_attr(out, field_name))
+
         return out
 
     def fit(self, t: Type[T]) -> T:
