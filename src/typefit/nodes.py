@@ -533,7 +533,9 @@ class MappingNode(Node):
             @dataclass
         """
 
-        if get_origin(t) is dict:
+        origin = get_origin(t)
+
+        if origin is dict or (isclass(origin) and issubclass(origin, Mapping)):
             return self.fit_dict(t)
         elif is_named_tuple(t) or is_dataclass(t):
             return self.fit_object(t)
@@ -565,7 +567,11 @@ class ListNode(Node):
         to try fitting the rest, for error reporting purposes.
         """
 
-        if get_origin(t) is not list:
+        origin = get_origin(t)
+        is_list = origin is list
+        is_seq = isclass(origin) and issubclass(origin, Sequence)
+
+        if not (is_list or is_seq):
             self.fail(f"{format_type_name(t)} is not a list")
 
         args = get_args(t)
