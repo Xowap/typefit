@@ -186,7 +186,7 @@ class Fitter:
             return self._fit_any(t, value)
         elif isinstance(value, (MappingNode, ListNode)):
             return value.fit(t)
-        elif t is None or t is None.__class__:  # noqa
+        elif t is None or t is None.__class__:
             return self._fit_none(t, value)
         elif origin is Literal:
             return self._fit_literal(t, value)
