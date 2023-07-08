@@ -19,7 +19,7 @@ keywords = ["typing", "json", "api"]
 
 [tool.poetry.dependencies]
 
-python = "^3.7"
+python = "^3.10"
 pendulum = "<3.0.0"
 httpx = ">=0.22,<2.0.0"
 pygments = "<3.0.0"
@@ -27,14 +27,17 @@ pygments = "<3.0.0"
 
 [tool.poetry.dev-dependencies]
 
-pytest = "^6.2.4"
+pytest = "*"
 ipython = "*"
-sphinx = "^4.0.2"
-importlib-metadata = "^0.23.0"
-isort = "^5.8.0"
-black = "^21.5b2"
+sphinx = "*"
+importlib-metadata = "*"
+isort = "*"
+black = "*"
 httpbin = "^0.7.0"
 werkzeug = "<2.1.0"
+
+[tool.poetry.group.dev.dependencies]
+monoformat = "^0.1.0b3"
 
 [build-system]
 

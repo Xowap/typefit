@@ -1,6 +1,7 @@
-from typing import Text, List, Union
-from typefit import narrows
 from dataclasses import dataclass
+from typing import List, Text, Union
+
+from typefit import narrows
 
 
 @dataclass(frozen=True)

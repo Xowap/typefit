@@ -36,7 +36,6 @@ limited but in 14 lines counting white space you can build a type-safe client
 for Hacker News. You'll find a [full example](example/typefit_hn) attached if
 you're interested.
 
-
 ## Documentation
 
 [✨ **Documentation is there** ✨](http://typefit.rtfd.io/)
