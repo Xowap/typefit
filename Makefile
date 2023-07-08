@@ -12,10 +12,14 @@ test: export PYTHONPATH=$(realpath example)
 test:
 	$(PYTHON_BIN) -m pytest tests
 
-build:
-	poetry install
-	cd docs && poetry run make html
-	poetry run pip list --format=freeze | grep -v typefit > requirements.txt
+check_release:
+ifndef VERSION
+	$(error VERSION is undefined)
+endif
 
-publish:
-	poetry publish --build
+release: check_release
+	git flow release start $(VERSION)
+	sed -i 's/^version =.*/version = "$(VERSION)"/' pyproject.toml
+	git add pyproject.toml
+	git commit -m "Bump version to $(VERSION)"
+	git flow release finish -m "Release $(VERSION)" $(VERSION) > /dev/null

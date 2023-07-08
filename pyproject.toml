@@ -41,5 +41,5 @@ monoformat = "^0.1.0b3"
 
 [build-system]
 
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core>=1.0.0", "setuptools"]
+build-backend = "poetry.core.masonry.api"
