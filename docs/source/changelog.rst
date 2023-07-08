@@ -6,6 +6,11 @@ Pre-1.0 Releases
 
 Before version 1.0, everything is experimental and can change at any time.
 
+Version 0.5.3
+~~~~~~~~~~~~~
+
+Minor bug fixes
+
 Version 0.5.2
 ~~~~~~~~~~~~~
 

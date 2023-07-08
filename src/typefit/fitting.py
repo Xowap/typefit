@@ -153,7 +153,7 @@ class Fitter:
             value.fit_success = True
             return value.value
 
-        raise value.fail(f"No match in literal {t!r} (got {value!r})")
+        raise value.fail(f"No match in literal {t!r} (got {value.value!r})")
 
     def fit_node(self, t: Type[T], value: Node) -> T:
         """
@@ -184,7 +184,7 @@ class Fitter:
             return self._fit_union(t, value)
         elif t is Any:
             return self._fit_any(t, value)
-        elif isinstance(value, (MappingNode, ListNode)):
+        elif isinstance(value, (MappingNode, ListNode, LiteralNode)):
             return value.fit(t)
         elif t is None or t is None.__class__:
             return self._fit_none(t, value)
