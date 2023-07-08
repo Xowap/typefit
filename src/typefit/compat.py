@@ -15,10 +15,16 @@ try:
 except ImportError:
 
     def get_origin(tp) -> Any:
-        """Get the unsubscripted version of a type.
+        """
+        Get the unsubscripted version of a type.
 
-        This supports generic types, Callable, Tuple, Union, Literal, Final and ClassVar.
-        Return None for unsupported types. Examples::
+        This supports generic types, Callable, Tuple, Union, Literal, Final and
+        ClassVar.
+
+        Return None for unsupported types.
+
+        Examples
+        --------
 
             get_origin(Literal[42]) is Literal
             get_origin(int) is None

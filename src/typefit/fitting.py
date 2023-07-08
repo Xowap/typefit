@@ -1,7 +1,15 @@
 from collections import abc
 from enum import Enum
 from inspect import isclass
-from typing import Any, Callable, Mapping, MutableSequence, Optional, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Mapping,
+    MutableSequence,
+    Optional,
+    Type,
+    Union,
+)
 
 from .compat import get_args, get_origin
 from .nodes import *
@@ -116,7 +124,7 @@ class Fitter:
             value.fit_success = True
             return None
 
-        value.fail(f"Value is not None")
+        value.fail("Value is not None")
 
     def _fit_enum(self, t: Type[T], value: Node) -> T:
         """

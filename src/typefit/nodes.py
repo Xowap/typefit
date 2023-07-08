@@ -262,8 +262,8 @@ class MappingNode(Node):
             def get_value() -> Any:
                 try:
                     return self.context[_key]
-                except KeyError:
-                    raise ValueError(f"Key {_key!r} is missing from the context")
+                except KeyError as e:
+                    raise ValueError(f"Key {_key!r} is missing from the context") from e
 
             return get_value
 
@@ -395,7 +395,7 @@ class ListNode(Node):
         to try fitting the rest, for error reporting purposes.
         """
 
-        if not get_origin(t) is list:
+        if get_origin(t) is not list:
             self.fail(f"{format_type_name(t)} is not a list")
 
         args = get_args(t)
@@ -445,19 +445,19 @@ class FlatNode(Node):
 
         if t is int:
             if not isinstance(self.value, int):
-                self.fail(f"Not an int")
+                self.fail("Not an int")
             return self.value
         elif t is float:
             if not isinstance(self.value, (int, float)):
-                self.fail(f"Neither a float nor an int")
+                self.fail("Neither a float nor an int")
             return float(self.value)
         elif t is str:
             if not isinstance(self.value, str):
-                self.fail(f"Not a string")
+                self.fail("Not a string")
             return self.value
         elif t is bool:
             if not isinstance(self.value, bool):
-                self.fail(f"Not a bool")
+                self.fail("Not a bool")
             return self.value
 
     def fit_class(self, t: Type[T]) -> T:
@@ -496,7 +496,8 @@ class FlatNode(Node):
             arg = self.fitter.fit(param.annotation, self.value)
         except ValueError:
             self.fail(
-                f"Constructor {format_type_name(t)} expects {param.annotation} but value does not fit"
+                f"Constructor {format_type_name(t)} expects "
+                f"{param.annotation} but value does not fit"
             )
 
         return t(arg)
