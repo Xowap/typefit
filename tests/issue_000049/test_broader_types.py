@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Sequence, Mapping
+from typing import Mapping, Sequence
 
 from typefit import typefit
 
