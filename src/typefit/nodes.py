@@ -3,8 +3,10 @@ from inspect import Parameter, isclass, signature
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     List,
+    Mapping,
     Optional,
     Set,
     Text,
@@ -14,14 +16,13 @@ from typing import (
 )
 
 from .compat import get_args, get_origin
-from .meta import Source
 from .utils import OrderedSet, format_type_name, is_named_tuple
 
 if TYPE_CHECKING:
     from .fitting import Fitter
 
 
-__all__ = ["T", "Node", "MappingNode", "ListNode", "FlatNode"]
+__all__ = ["T", "Node", "MappingNode", "ListNode", "FlatNode", "LiteralNode"]
 
 
 T = TypeVar("T")
@@ -125,6 +126,7 @@ class MappingNode(Node):
     missing_keys: List[Text] = field(default_factory=list, repr=False)
     unwanted_keys: List[Text] = field(default_factory=list, repr=False)
     problem_is_kids: bool = field(default=False, repr=False)
+    context: Mapping[str, Any] = field(default_factory=dict, repr=False)
 
     def fit_dict(self, t: Type[T]) -> T:
         """
@@ -229,16 +231,33 @@ class MappingNode(Node):
 
         kwargs = {}
         fields_sources = {}
+        fields_injections = {}
         required = set()
         expected = set()
         failed_keys = []
 
+        def value_from_context(_key: str) -> Callable[[], Any]:
+            """
+            Encapsulates the logic that we're gonna give to the LiteralNode
+            when doing context injection
+            """
+
+            def get_value() -> Any:
+                try:
+                    return self.context[_key]
+                except KeyError:
+                    raise ValueError(f"Key {_key!r} is missing from the context")
+
+            return get_value
+
         if is_dataclass(t):
             # noinspection PyDataclass
             for t_field in fields(t):
-                if t_field.metadata and "typefit_source" in t_field.metadata:
-                    source: Source = t_field.metadata["typefit_source"]
-                    fields_sources[t_field.name] = source.value_from_json
+                match (t_field.metadata):
+                    case {"typefit_source": source}:
+                        fields_sources[t_field.name] = source.value_from_json
+                    case {"typefit_from_context": key}:
+                        fields_injections[t_field.name] = value_from_context(key)
 
         param: Parameter
         for param in sig.parameters.values():
@@ -256,6 +275,8 @@ class MappingNode(Node):
             try:
                 if param.name in fields_sources:
                     sub_v = fields_sources[param.name](self.children)
+                elif param.name in fields_injections:
+                    sub_v = LiteralNode(self.fitter, fields_injections[param.name])
                 else:
                     sub_v = self.children[param.name]
 
@@ -466,3 +487,24 @@ class FlatNode(Node):
 
         self.fit_success = True
         return out
+
+
+@dataclass
+class LiteralNode(Node):
+    """
+    This kind of node is used to inject a literal value that we don't want to
+    fit into anything. That's not really used on things coming from JSON, but
+    rather wraps stuff like context injections.
+
+    If the value is callable, it will be called without arguments. The callable
+    is expected to raise ValueError if its internal validation fails.
+    """
+
+    def fit(self, t: Type[T]) -> T:
+        if callable(self.value):
+            try:
+                return self.value()
+            except ValueError as e:
+                self.fail(e.args[0])
+        else:
+            return self.value

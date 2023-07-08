@@ -1,7 +1,7 @@
 from collections import abc
 from enum import Enum
 from inspect import isclass
-from typing import Any, Optional, Type, Union
+from typing import Any, Mapping, Optional, Type, Union
 
 from .compat import get_args, get_origin
 from .nodes import *
@@ -26,6 +26,7 @@ class Fitter:
         self,
         no_unwanted_keys: bool = False,
         error_reporter: Optional[ErrorReporter] = None,
+        context: Optional[Mapping[str, Any]] = None,
     ):
         """
         Constructs the instance.
@@ -39,10 +40,15 @@ class Fitter:
             Error reporting for when a validation fails. By default no report
             is made but you might want to arrange reporting for your needs,
             otherwise you're going to be debugging in the blind.
+        context
+            Custom context whose values can be injected into fitted object
+            through the use if :py:func:`typefit.meta.meta`'s `context`
+            argument.
         """
 
         self.no_unwanted_keys = no_unwanted_keys
         self.error_reporter = error_reporter
+        self.context = context or {}
 
     def _as_node(self, value: Any):
         """
@@ -60,7 +66,10 @@ class Fitter:
             return ListNode(self, value, [self._as_node(x) for x in value])
         elif isinstance(value, abc.Mapping):
             return MappingNode(
-                self, value, {k: self._as_node(v) for k, v in value.items()}
+                self,
+                value,
+                {k: self._as_node(v) for k, v in value.items()},
+                context=self.context,
             )
         else:
             raise ValueError
@@ -84,7 +93,7 @@ class Fitter:
         Wrapper around the ``FlatNode``'s fit method.
         """
 
-        if isinstance(value, FlatNode):
+        if isinstance(value, (FlatNode, LiteralNode)):
             return value.fit(t)
 
         value.fail(f"Node is not {t}")
@@ -190,7 +199,7 @@ class Fitter:
             raise
 
 
-def typefit(t: Type[T], value: Any) -> T:
+def typefit(t: Type[T], value: Any, context: Optional[Mapping[str, Any]] = None) -> T:
     """
     Fits a JSON-decoded value into native Python type-annotated objects.
 
@@ -216,6 +225,9 @@ def typefit(t: Type[T], value: Any) -> T:
           - :class:`typing.List` to declare a list and the type of list values
     value
         Value to be fit into the type
+    context
+        Custom context whose values can be injected into fitted object through
+        the use if :py:func:`typefit.meta.meta`'s `context` argument.
 
     Returns
     -------
@@ -235,5 +247,6 @@ def typefit(t: Type[T], value: Any) -> T:
     return Fitter(
         error_reporter=LogErrorReporter(
             formatter=PrettyJson5Formatter(colors="terminal16m")
-        )
+        ),
+        context=context,
     ).fit(t, value)

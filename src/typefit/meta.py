@@ -1,6 +1,4 @@
-from typing import Any, Callable, Dict, NamedTuple, Optional, Text
-
-Mapping = Dict[Text, Any]
+from typing import Any, Callable, Dict, Mapping, NamedTuple, Optional, Text
 
 
 class Source(NamedTuple):
@@ -11,11 +9,15 @@ class Source(NamedTuple):
     produce a dictionary as output, even if it has only one key.
     """
 
-    value_from_json: Callable[[Mapping], Any]
+    value_from_json: Callable[[Mapping[str, Any]], Any]
     value_to_json: Callable[[Text, Any], Dict]
 
 
-def meta(source: Optional[Source] = None):
+def meta(
+    source: Optional[Source] = None,
+    is_root: bool = False,
+    context: Optional[str] = None,
+):
     """
     Generates the field metadata for a field based on what arguments are
     provided. By example, to source a field into a field with another name in
@@ -35,12 +37,29 @@ def meta(source: Optional[Source] = None):
         Source function, that given the mapping as input will provide the
         value as output. If the value isn't found in the mapping, a KeyError
         should arise.
+    is_root
+        Whether or not Typefit should inject the root object into the field.
+        This is useful when you want to have a reference to the root object
+        from a child object.
+    context
+        Instead of getting this value from the parsed object, Typefit will
+        inject this key from the context into the field. This is useful when
+        you want to inject a value from the context into the object.
     """
 
     out = {}
 
+    if sum([is_root, context is not None, source is not None]) > 1:
+        raise ValueError("Only one of is_root, context and source can be provided.")
+
     if source:
         out["typefit_source"] = source
+
+    if is_root:
+        out["typefit_is_root"] = True
+
+    if context:
+        out["typefit_from_context"] = context
 
     return out
 
