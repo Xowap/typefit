@@ -259,6 +259,8 @@ class MappingNode(Node):
                     case {"typefit_from_context": key}:
                         fields_injections[t_field.name] = value_from_context(key)
 
+        literal_nodes: Dict[str, LiteralNode] = {}
+
         param: Parameter
         for param in sig.parameters.values():
             if param.kind not in {
@@ -277,6 +279,7 @@ class MappingNode(Node):
                     sub_v = fields_sources[param.name](self.children)
                 elif param.name in fields_injections:
                     sub_v = LiteralNode(self.fitter, fields_injections[param.name])
+                    literal_nodes[param.name] = sub_v
                 else:
                     sub_v = self.children[param.name]
 
@@ -306,7 +309,15 @@ class MappingNode(Node):
                 self.children[k].errors.add(f"Unwanted by {format_type_name(t)}")
 
         if failed_keys:
-            errors.append(f'No fit for keys: {", ".join(repr(x) for x in failed_keys)}')
+            if normal_failed_keys := set(failed_keys) - fields_injections.keys():
+                errors.append(
+                    f'No fit for keys: {", ".join(repr(x) for x in normal_failed_keys)}'
+                )
+
+            for key in failed_keys:
+                if key in literal_nodes:
+                    for error in literal_nodes[key].errors:
+                        errors.append(error)
 
         if errors:
             self.problem_is_kids = True
