@@ -181,6 +181,91 @@ answer is that you're doing type annotations so you must provide valid types
 otherwise you'll confuse your static type checker, which loses the interest of
 annotating types in a first place.
 
+Injection
+---------
+
+You might not want everything in your objects to be exclusively parsed from the
+input but also provide some context so that methods implemented on each object
+can actually interact with the outside world.
+
+Context
++++++++
+
+The first type of injection is context injection. Typically you'll start by
+defining a field in your class that needs to be injected:
+
+.. code-block:: python
+
+    from dataclasses import dataclass, field
+    from typing import Text
+    from typefit import typefit, meta
+
+    @dataclass
+    class Info:
+        some_thing: Text
+        other_thing: Text = field(metadata=meta(context='other_thing'))
+
+        def do_something(self):
+            print(self.some_thing)
+            print(self.other_thing)
+
+
+Then you can pass a context to the typefit function:
+
+.. code-block:: python
+
+    x: Info = typefit(Info, {"some_thing": "foo"}, context={"other_thing": "bar"})
+    x.do_something()
+
+Let's note that the context will be provided to all objects recursively and it
+will not be fitted or anything.
+
+A use-case for this for example could be to provide a database connection or
+some kind of resource handler to all the fitted objects that need it so that
+they can have methods of their own.
+
+Root
+++++
+
+The second type of injection is root injection. This is useful when you want to
+have a reference to the root object from your children. This allows them to
+access the full tree and thus to see what happens in their siblings.
+
+That can be useful for example if you parse a configuration file and each
+object from this configuration file wants to access methods from sibling
+objects to do some kind of validation or cross-reference.
+
+Here's an example of how a child can access its siblings:
+
+.. code-block:: python
+
+    from dataclasses import dataclass, field
+    from typing import Text, List
+    from typefit import typefit, meta
+
+    @dataclass
+    class Child:
+        name: Text
+        root: 'Parent' = field(metadata=meta(inject_root=True))
+
+        def list_siblings(self):
+            names = [s.name for s in self.root.children]
+            print(f"Siblings are named: {', '.join(names)}")
+
+    @dataclass
+    class Parent:
+        children: List[Child]
+
+    family = typefit(Parent, {
+        "children": [
+            {"name": "Alice"},
+            {"name": "Bob"},
+            {"name": "Charlie"},
+        ]
+    })
+
+    family.children[0].list_siblings()
+
 Reference
 ---------
 

@@ -1,8 +1,7 @@
 # TypeFit
 
 [![Read the Docs](https://img.shields.io/readthedocs/typefit)](http://typefit.rtfd.io/)
-[![Build Status](https://img.shields.io/travis/Xowap/typefit)](https://travis-ci.org/Xowap/typefit)
-[![LGTM Grade](https://img.shields.io/lgtm/grade/python/github/Xowap/typefit)](https://lgtm.com/projects/g/Xowap/typefit/)
+[![Build Status](https://github.com/Xowap/typefit/actions/workflows/run-tests.yaml/badge.svg)](https://github.com/Xowap/typefit/actions/workflows/run-tests.yaml)
 
 Typing annotations make Python awesome, however it's complicated to keep your
 data annotated when it comes from external sources like APIs. The goal of
@@ -35,7 +34,6 @@ This is the full example of a Hacker News API client. Its functionality is
 limited but in 14 lines counting white space you can build a type-safe client
 for Hacker News. You'll find a [full example](example/typefit_hn) attached if
 you're interested.
-
 
 ## Documentation
 

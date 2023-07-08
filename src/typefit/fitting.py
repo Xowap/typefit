@@ -1,7 +1,7 @@
 from collections import abc
 from enum import Enum
 from inspect import isclass
-from typing import Any, Optional, Type, Union
+from typing import Any, Callable, Mapping, MutableSequence, Optional, Type, Union
 
 from .compat import get_args, get_origin
 from .nodes import *
@@ -26,6 +26,7 @@ class Fitter:
         self,
         no_unwanted_keys: bool = False,
         error_reporter: Optional[ErrorReporter] = None,
+        context: Optional[Mapping[str, Any]] = None,
     ):
         """
         Constructs the instance.
@@ -39,10 +40,16 @@ class Fitter:
             Error reporting for when a validation fails. By default no report
             is made but you might want to arrange reporting for your needs,
             otherwise you're going to be debugging in the blind.
+        context
+            Custom context whose values can be injected into fitted object
+            through the use if :py:func:`typefit.meta.meta`'s `context`
+            argument.
         """
 
         self.no_unwanted_keys = no_unwanted_keys
         self.error_reporter = error_reporter
+        self.context = context or {}
+        self.root_injectors: MutableSequence[Callable[[Any], None]] = []
 
     def _as_node(self, value: Any):
         """
@@ -60,7 +67,10 @@ class Fitter:
             return ListNode(self, value, [self._as_node(x) for x in value])
         elif isinstance(value, abc.Mapping):
             return MappingNode(
-                self, value, {k: self._as_node(v) for k, v in value.items()}
+                self,
+                value,
+                {k: self._as_node(v) for k, v in value.items()},
+                context=self.context,
             )
         else:
             raise ValueError
@@ -84,7 +94,7 @@ class Fitter:
         Wrapper around the ``FlatNode``'s fit method.
         """
 
-        if isinstance(value, FlatNode):
+        if isinstance(value, (FlatNode, LiteralNode)):
             return value.fit(t)
 
         value.fail(f"Node is not {t}")
@@ -106,7 +116,7 @@ class Fitter:
             value.fit_success = True
             return None
 
-        value.fail(f"Value is not None")
+        value.fail("Value is not None")
 
     def _fit_enum(self, t: Type[T], value: Node) -> T:
         """
@@ -168,6 +178,24 @@ class Fitter:
         On failure a ValueError will arise and if an error reporter is set it
         will be sent the node to generate the error report.
 
+        Notes
+        -----
+        You'll notice down there some "root_injector" business and might wonder
+        what the fuck is this. We have a feature that allows to inject the
+        "root" object (aka the one that we're about to return) into marked
+        fields down the line. However all the child objects are built before
+        the root is built itself. As a result, all those fields are initially
+        filled up by "None" and then when we finally have our root object
+        constructed we go back into each of those objects to set correct
+        values.
+
+        In order to do this in an orthogonal way, each node has the possibility
+        every time they encounter a place to inject a root field to add a
+        callable (which is obviously gonna be a 2nd-order function) into the
+        `root_injectors` attribute of this class. Meaning that at this point
+        all we got to do is to call all the root injectors (no need to recurse
+        into anything, yay).
+
         Parameters
         ----------
         t
@@ -183,14 +211,19 @@ class Fitter:
         node = self._as_node(value)
 
         try:
-            return self.fit_node(t, node)
+            out = self.fit_node(t, node)
         except ValueError:
             if self.error_reporter:
                 self.error_reporter.report(node)
             raise
+        else:
+            for injector in self.root_injectors:
+                injector(out)
+
+            return out
 
 
-def typefit(t: Type[T], value: Any) -> T:
+def typefit(t: Type[T], value: Any, context: Optional[Mapping[str, Any]] = None) -> T:
     """
     Fits a JSON-decoded value into native Python type-annotated objects.
 
@@ -216,6 +249,9 @@ def typefit(t: Type[T], value: Any) -> T:
           - :class:`typing.List` to declare a list and the type of list values
     value
         Value to be fit into the type
+    context
+        Custom context whose values can be injected into fitted object through
+        the use if :py:func:`typefit.meta.meta`'s `context` argument.
 
     Returns
     -------
@@ -235,5 +271,6 @@ def typefit(t: Type[T], value: Any) -> T:
     return Fitter(
         error_reporter=LogErrorReporter(
             formatter=PrettyJson5Formatter(colors="terminal16m")
-        )
+        ),
+        context=context,
     ).fit(t, value)

@@ -1,7 +1,7 @@
 [tool.poetry]
 
 name = "typefit"
-version = "0.4.2"
+version = "0.5.0"
 
 description = "Fits JSON values into Python type-anotated objects"
 license = "WTFPL"
@@ -16,27 +16,59 @@ homepage = "https://github.com/Xowap/typefit/"
 
 keywords = ["typing", "json", "api"]
 
+packages = [
+    { include = "typefit", from = "src" }
+]
+
 
 [tool.poetry.dependencies]
-
-python = "^3.7"
+python = "^3.10"
 pendulum = "<3.0.0"
 httpx = ">=0.22,<2.0.0"
 pygments = "<3.0.0"
 
 
-[tool.poetry.dev-dependencies]
-
-pytest = "^6.2.4"
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
 ipython = "*"
-sphinx = "^4.0.2"
-importlib-metadata = "^0.23.0"
-isort = "^5.8.0"
-black = "^21.5b2"
+sphinx = "*"
+importlib-metadata = "*"
+isort = "*"
+black = "*"
 httpbin = "^0.7.0"
 werkzeug = "<2.1.0"
+monoformat = "^0.1.0b3"
+ruff = "^0.0.277"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+src = ["src", "tests", "docs/conf.py"]
+select = [
+    "F",
+    "E",
+    "W",
+    "C90",
+    "I",
+    "N",
+    "YTT",
+    "ASYNC",
+    "S",
+    "BLE",
+    "B",
+    "RUF",
+]
+ignore = ["F405", "F403"]
+
+[tool.ruff.per-file-ignores]
+"tests/issue_000004/test_models.py" = ["E501"]
+"tests/issue_000014/test_format.py" = ["E501"]
+"tests/issue_000050/test_context.py" = ["E501"]
+"tests/*" = ["S"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests", "example"]
 
 [build-system]
-
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core>=1.0.0", "setuptools"]
+build-backend = "poetry.core.masonry.api"

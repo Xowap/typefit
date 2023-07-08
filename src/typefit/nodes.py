@@ -1,30 +1,51 @@
 from dataclasses import dataclass, field, fields, is_dataclass
-from inspect import Parameter, isclass, signature
+from inspect import Parameter, Signature, isclass, signature
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
+    Iterable,
     List,
+    Mapping,
+    MutableSequence,
     Optional,
+    Sequence,
     Set,
     Text,
+    Tuple,
     Type,
     TypeVar,
     get_type_hints,
 )
 
 from .compat import get_args, get_origin
-from .meta import Source
 from .utils import OrderedSet, format_type_name, is_named_tuple
 
 if TYPE_CHECKING:
     from .fitting import Fitter
 
 
-__all__ = ["T", "Node", "MappingNode", "ListNode", "FlatNode"]
+__all__ = ["T", "Node", "MappingNode", "ListNode", "FlatNode", "LiteralNode"]
 
 
 T = TypeVar("T")
+
+
+def set_root_attr(obj: Any, attr: str):
+    """
+    2nd-order function to set the root object into `obj`'s attribute `attr`.
+    See :py:meth:`typefit.fitting.Fitter.fit` for more information.
+
+    See Also
+    --------
+    typefit.fitting.Fitter.fit
+    """
+
+    def do_it(value: Any):
+        object.__setattr__(obj, attr, value)
+
+    return do_it
 
 
 @dataclass
@@ -125,6 +146,7 @@ class MappingNode(Node):
     missing_keys: List[Text] = field(default_factory=list, repr=False)
     unwanted_keys: List[Text] = field(default_factory=list, repr=False)
     problem_is_kids: bool = field(default=False, repr=False)
+    context: Mapping[str, Any] = field(default_factory=dict, repr=False)
 
     def fit_dict(self, t: Type[T]) -> T:
         """
@@ -187,6 +209,20 @@ class MappingNode(Node):
         self.fit_success = True
         return out
 
+    def value_from_context(self, key: str) -> Callable[[], Any]:
+        """
+        Encapsulates the logic that we're gonna give to the LiteralNode
+        when doing context injection
+        """
+
+        def get_value() -> Any:
+            try:
+                return self.context[key]
+            except KeyError as e:
+                raise ValueError(f"Key {key!r} is missing from the context") from e
+
+        return get_value
+
     def fit_object(self, t: Type[T]) -> T:
         """
         Fitting into dataclasses and named tuples. On paper that's fairly
@@ -227,18 +263,114 @@ class MappingNode(Node):
         sig = signature(t)
         hints = get_type_hints(t)
 
-        kwargs = {}
+        fields_injections, fields_sources, root_fields = self.parse_dataclass(t)
+
+        (
+            expected,
+            failed_keys,
+            kwargs,
+            literal_nodes,
+            required,
+        ) = self.make_constructor_kwargs(fields_injections, fields_sources, hints, sig)
+
+        missing = required - set(kwargs) - set(failed_keys)
+        unwanted = set(self.children) - expected
+        errors = []
+
+        self.report_missing(errors, missing)
+        self.report_unwanted(errors, t, unwanted)
+        self.report_failed(errors, failed_keys, fields_injections, literal_nodes)
+
+        if errors:
+            self.problem_is_kids = True
+            self.fail(". ".join([f"Wrong keys set for {format_type_name(t)}", *errors]))
+
+        return self.make_out_instance(kwargs, root_fields, t)
+
+    def parse_dataclass(
+        self, t: Type[T]
+    ) -> Tuple[
+        Mapping[str, Any],
+        Mapping[str, Callable[[Mapping[str, Any]], Any]],
+        Sequence[str],
+    ]:
+        """
+        If the expected type is a dataclass, there might be some metadata on
+        the fields. Which helps for example to source a field from a different
+        field name or to inject context into given fields. We're extracting
+        all this metadata from here (if relevant).
+
+        Parameters
+        ----------
+        t
+            The type of the object that we're instantiating
+        """
+
+        root_fields = []
         fields_sources = {}
+        fields_injections = {}
+
+        if not is_dataclass(t):
+            return fields_injections, fields_sources, root_fields
+
+        for t_field in fields(t):
+            match (t_field.metadata):
+                case {"typefit_source": source}:
+                    fields_sources[t_field.name] = source.value_from_json
+                case {"typefit_from_context": key}:
+                    fields_injections[t_field.name] = self.value_from_context(key)
+                case {"typefit_inject_root": True}:
+                    fields_injections[t_field.name] = None
+                    root_fields.append(t_field.name)
+
+        return fields_injections, fields_sources, root_fields
+
+    def make_constructor_kwargs(
+        self,
+        fields_injections: Mapping[str, Any],
+        fields_sources: Mapping[str, Callable[[Mapping[str, Any]], Any]],
+        hints: Any,
+        sig: Signature,
+    ) -> Tuple[
+        Set[str],
+        Sequence[str],
+        Mapping[str, Any],
+        Mapping[str, "LiteralNode"],
+        Set[str],
+    ]:
+        """
+        We're going through every field of the constructor's signature and we
+        try to fit the corresponding value from the input JSON.
+
+        We only support parameters that can be called by keyword, as this is
+        what we're getting from a mapping type.
+
+        For each field we got three possibilities:
+
+        - The field has some meta mapping (most likely to get its value from
+          another field) in which case we call the mapping function
+        - Or it is subject to some kind of injection (either root or context),
+          which requires to wrap the mapped value into a LiteralNode and to
+          continue the resolution like that
+        - Or finally it's a normal node and we just get its value
+
+        Parameters
+        ----------
+        fields_injections
+            The mapping of keys to the injection functions
+        fields_sources
+            The mapping of keys to the mapping functions
+        hints
+            The type hints of the constructor
+        sig
+            The signature of the constructor
+        """
+
+        literal_nodes: Dict[str, LiteralNode] = {}
+        kwargs = {}
         required = set()
         expected = set()
         failed_keys = []
-
-        if is_dataclass(t):
-            # noinspection PyDataclass
-            for t_field in fields(t):
-                if t_field.metadata and "typefit_source" in t_field.metadata:
-                    source: Source = t_field.metadata["typefit_source"]
-                    fields_sources[t_field.name] = source.value_from_json
 
         param: Parameter
         for param in sig.parameters.values():
@@ -256,6 +388,9 @@ class MappingNode(Node):
             try:
                 if param.name in fields_sources:
                     sub_v = fields_sources[param.name](self.children)
+                elif param.name in fields_injections:
+                    sub_v = LiteralNode(self.fitter, fields_injections[param.name])
+                    literal_nodes[param.name] = sub_v
                 else:
                     sub_v = self.children[param.name]
 
@@ -269,13 +404,43 @@ class MappingNode(Node):
                 except ValueError:
                     failed_keys.append(param.name)
 
-        missing = required - set(kwargs) - set(failed_keys)
-        unwanted = set(self.children) - expected
-        errors = []
+        return expected, failed_keys, kwargs, literal_nodes, required
+
+    def report_missing(
+        self, errors: MutableSequence[str], missing: Iterable[str]
+    ) -> None:
+        """
+        Some keys might be missing from the input JSON. This is where we do
+        the check and report them.
+
+        Parameters
+        ----------
+        errors
+            Output errors list
+        missing
+            The list of missing keys
+        """
 
         if missing:
             self.missing_keys = [*missing]
             errors.append(f'Missing keys: {", ".join(repr(x) for x in missing)}')
+
+    def report_unwanted(
+        self, errors: MutableSequence[str], t: Type[T], unwanted: Iterable[str]
+    ) -> None:
+        """
+        There is an option to report unwanted keys as errors. This is where
+        we do the check.
+
+        Parameters
+        ----------
+        errors
+            Output errors list
+        t
+            The type of the object that we're instantiating
+        unwanted
+            The list of unwanted keys
+        """
 
         if self.fitter.no_unwanted_keys and unwanted:
             self.unwanted_keys = [*unwanted]
@@ -284,15 +449,76 @@ class MappingNode(Node):
             for k in unwanted:
                 self.children[k].errors.add(f"Unwanted by {format_type_name(t)}")
 
-        if failed_keys:
-            errors.append(f'No fit for keys: {", ".join(repr(x) for x in failed_keys)}')
+    def report_failed(
+        self,
+        errors: MutableSequence[str],
+        failed_keys: Sequence[str],
+        fields_injections: Mapping[str, Any],
+        literal_nodes: Mapping[str, "LiteralNode"],
+    ) -> None:
+        """
+        If any sub-key failed to fit, we're going to report the error. One
+        of two thing might have happened:
 
-        if errors:
-            self.problem_is_kids = True
-            self.fail(". ".join([f"Wrong keys set for {format_type_name(t)}", *errors]))
+        - A "normal" key failed, aka it was impossible to fit the JSON value
+          into the expected type.
+        - An injection failed (in theory either root or context injection but
+          in practice it's only context injection that can fail). In that case
+          we'll report the error at this level as the goal is to be able to
+          display the error on the input JSON and since it's an injection the
+          value is not in the input JSON. Thus, the error will have to be
+          displayed at the level of the parent node (aka this node).
+
+        Parameters
+        ----------
+        errors
+            Some output list which will contain errors
+        failed_keys
+            The list of keys that failed to fit
+        fields_injections
+            The mapping of keys to the injection functions
+        literal_nodes
+            The mapping of keys to the literal nodes
+        """
+
+        if failed_keys:
+            if normal_failed_keys := set(failed_keys) - fields_injections.keys():
+                errors.append(
+                    f'No fit for keys: {", ".join(repr(x) for x in normal_failed_keys)}'
+                )
+
+            for key in failed_keys:
+                if key in literal_nodes:
+                    for error in literal_nodes[key].errors:
+                        errors.append(error)
+
+    def make_out_instance(
+        self, kwargs: Mapping[str, Any], root_fields: Sequence[str], t: Type[T]
+    ) -> T:
+        """
+        Generates the output instance from the kwargs.
+
+        Additionally this function has the mission to report into which fields
+        the root should be injected (if any). We know this from the root_fields
+        parameter which comes from the dataclass parsing logic in
+        :py:meth:`~.parse_dataclass`.
+
+        Parameters
+        ----------
+        kwargs
+            The kwargs that are going to be passed to the constructor
+        root_fields
+            The fields into which the root should be injected
+        t
+            The type of the object that we're instantiating
+        """
 
         out = t(**kwargs)
         self.fit_success = True
+
+        for field_name in root_fields:
+            self.fitter.root_injectors.append(set_root_attr(out, field_name))
+
         return out
 
     def fit(self, t: Type[T]) -> T:
@@ -307,7 +533,9 @@ class MappingNode(Node):
             @dataclass
         """
 
-        if get_origin(t) is dict:
+        origin = get_origin(t)
+
+        if origin is dict or (isclass(origin) and issubclass(origin, Mapping)):
             return self.fit_dict(t)
         elif is_named_tuple(t) or is_dataclass(t):
             return self.fit_object(t)
@@ -339,7 +567,11 @@ class ListNode(Node):
         to try fitting the rest, for error reporting purposes.
         """
 
-        if not get_origin(t) is list:
+        origin = get_origin(t)
+        is_list = origin is list
+        is_seq = isclass(origin) and issubclass(origin, Sequence)
+
+        if not (is_list or is_seq):
             self.fail(f"{format_type_name(t)} is not a list")
 
         args = get_args(t)
@@ -389,19 +621,19 @@ class FlatNode(Node):
 
         if t is int:
             if not isinstance(self.value, int):
-                self.fail(f"Not an int")
+                self.fail("Not an int")
             return self.value
         elif t is float:
             if not isinstance(self.value, (int, float)):
-                self.fail(f"Neither a float nor an int")
+                self.fail("Neither a float nor an int")
             return float(self.value)
         elif t is str:
             if not isinstance(self.value, str):
-                self.fail(f"Not a string")
+                self.fail("Not a string")
             return self.value
         elif t is bool:
             if not isinstance(self.value, bool):
-                self.fail(f"Not a bool")
+                self.fail("Not a bool")
             return self.value
 
     def fit_class(self, t: Type[T]) -> T:
@@ -440,7 +672,8 @@ class FlatNode(Node):
             arg = self.fitter.fit(param.annotation, self.value)
         except ValueError:
             self.fail(
-                f"Constructor {format_type_name(t)} expects {param.annotation} but value does not fit"
+                f"Constructor {format_type_name(t)} expects "
+                f"{param.annotation} but value does not fit"
             )
 
         return t(arg)
@@ -466,3 +699,24 @@ class FlatNode(Node):
 
         self.fit_success = True
         return out
+
+
+@dataclass
+class LiteralNode(Node):
+    """
+    This kind of node is used to inject a literal value that we don't want to
+    fit into anything. That's not really used on things coming from JSON, but
+    rather wraps stuff like context injections.
+
+    If the value is callable, it will be called without arguments. The callable
+    is expected to raise ValueError if its internal validation fails.
+    """
+
+    def fit(self, t: Type[T]) -> T:
+        if callable(self.value):
+            try:
+                return self.value()
+            except ValueError as e:
+                self.fail(e.args[0])
+        else:
+            return self.value
