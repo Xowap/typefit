@@ -121,6 +121,8 @@ class Serializer:
 
         def _get_values():
             for field in fields(obj.__class__):
+                source: Source
+
                 match (field.metadata):
                     case {"typefit_source": source}:
                         yield {
