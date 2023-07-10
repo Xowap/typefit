@@ -121,14 +121,18 @@ class Serializer:
 
         def _get_values():
             for field in fields(obj.__class__):
-                if field.metadata and "typefit_source" in field.metadata:
-                    source: Source = field.metadata["typefit_source"]
-                    yield {
-                        k: self.serialize(v)
-                        for k, v in source.value_to_json(field.name, obj).items()
-                    }
-                else:
-                    yield {field.name: self.serialize(getattr(obj, field.name))}
+                source: Source
+
+                match (field.metadata):
+                    case {"typefit_source": source}:
+                        yield {
+                            k: self.serialize(v)
+                            for k, v in source.value_to_json(field.name, obj).items()
+                        }
+                    case {"typefit_inject_root": True} | {"typefit_from_context": _}:
+                        pass
+                    case _:
+                        yield {field.name: self.serialize(getattr(obj, field.name))}
 
         return dict(ChainMap(*_get_values()))
 
