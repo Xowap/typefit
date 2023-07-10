@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Mapping
+from typing import Any, Mapping
 
 from pytest import raises
 
@@ -30,6 +30,12 @@ class B:
 @dataclass
 class A:
     val: Mapping[str, Mapping[str, B]]
+
+
+@dataclass
+class DoubleFit:
+    a: int = field(metadata=meta(context="a"))
+    b: Any = field(metadata=meta(context="b"))
 
 
 class TestErrorReporter(ErrorReporter):
@@ -114,3 +120,15 @@ def test_context_injection_fail():
     },
 }"""
     )
+
+
+def test_double_fit():
+    context = dict(a=1, b=2)
+    x: DoubleFit = typefit(
+        DoubleFit,
+        dict(),
+        context=context,
+    )
+
+    assert x.a == 1
+    assert x.b == 2
