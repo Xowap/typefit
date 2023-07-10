@@ -180,11 +180,13 @@ class Fitter:
 
         origin = get_origin(t)
 
+        if isinstance(value, LiteralNode):
+            return value.fit(t)
         if origin is Union or origin is UnionType:
             return self._fit_union(t, value)
         elif t is Any:
             return self._fit_any(t, value)
-        elif isinstance(value, (MappingNode, ListNode, LiteralNode)):
+        elif isinstance(value, (MappingNode, ListNode)):
             return value.fit(t)
         elif t is None or t is None.__class__:
             return self._fit_none(t, value)
