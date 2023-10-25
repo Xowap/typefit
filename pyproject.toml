@@ -36,7 +36,7 @@ importlib-metadata = "*"
 isort = "*"
 black = "*"
 httpbin = "^0.7.0"
-werkzeug = "<2.1.0"
+werkzeug = "<3.1.0"
 monoformat = "^0.1.0b3"
 ruff = "^0.0.277"
 
